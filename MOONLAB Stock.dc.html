@@ -395,7 +395,10 @@
             <div style="background:#FFFDFA;border:1px solid #EBE7DF;border-radius:16px;padding:clamp(16px,3vw,22px) clamp(16px,3.2vw,24px)">
               <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px">
                 <div style="font-size:13.5px;font-weight:500">รายการของ {{ dayLabel }}</div>
-                <div style="font-size:12px;font-weight:400;color:#8C867C">{{ dayCount }}</div>
+                <div style="display:flex;align-items:center;gap:10px">
+                  <div style="font-size:12px;font-weight:400;color:#8C867C">{{ dayCount }}</div>
+                  <button onClick="{{ resetDay }}" style="{{ resetStyle }}">{{ resetLabel }}</button>
+                </div>
               </div>
               <div style="font-size:11.5px;font-weight:300;color:#A19A8E;margin-bottom:12px">ค่าโฆษณาวันนี้ กรอกครั้งเดียวต่อวัน</div>
               <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
@@ -405,16 +408,53 @@
               </div>
               <div style="max-height:280px;overflow:auto">
                 <sc-for list="{{ dayRows }}" as="d" hint-placeholder-count="3">
-                  <div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-top:1px solid #F2EFE8">
-                    <div style="flex:1;min-width:0">
-                      <div style="font-size:12.5px;font-weight:400;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ d.name }}</div>
-                      <div style="font-size:10.5px;font-weight:300;color:#A19A8E">{{ d.meta }}</div>
+                  <div style="border-top:1px solid #F2EFE8">
+                    <div style="display:flex;align-items:center;gap:10px;padding:9px 0">
+                      <div style="flex:1;min-width:0">
+                        <div style="font-size:12.5px;font-weight:400;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ d.name }}</div>
+                        <div style="font-size:10.5px;font-weight:300;color:#A19A8E">{{ d.meta }}</div>
+                      </div>
+                      <div style="text-align:right;flex:none">
+                        <div style="font-size:12.5px;font-weight:400">{{ d.revenue }}</div>
+                        <div style="font-size:10.5px;font-weight:300;color:#7C9070">{{ d.net }}</div>
+                      </div>
+                      <button onClick="{{ d.edit }}" style="{{ d.editBtnStyle }}" style-hover="color:#4B4459;border-color:#D8D3CA">✎</button>
+                      <button onClick="{{ d.del }}" style="border:1px solid #E8E3DA;background:#FDFCF9;color:#A19A8E;border-radius:8px;width:26px;height:26px;font-size:14px;line-height:1;cursor:pointer;flex:none" style-hover="color:#B4675C;border-color:#E3CFC9">×</button>
                     </div>
-                    <div style="text-align:right;flex:none">
-                      <div style="font-size:12.5px;font-weight:400">{{ d.revenue }}</div>
-                      <div style="font-size:10.5px;font-weight:300;color:#7C9070">{{ d.net }}</div>
+
+                    <div style="{{ d.editStyle }}">
+                      <div style="display:grid;grid-template-columns:1fr 1fr;gap:9px">
+                        <div>
+                          <div style="font-size:10.5px;font-weight:400;color:#9A9388;margin-bottom:5px">จำนวน (ชิ้น)</div>
+                          <input value="{{ d.eQty }}" onChange="{{ d.onEQty }}" inputmode="numeric" style="width:100%;border:1px solid #E0DBD2;background:#FFFDFA;border-radius:9px;padding:10px 11px;font-size:14px" />
+                        </div>
+                        <div>
+                          <div style="font-size:10.5px;font-weight:400;color:#9A9388;margin-bottom:5px">ราคา/ชิ้น</div>
+                          <input value="{{ d.ePrice }}" onChange="{{ d.onEPrice }}" inputmode="numeric" style="width:100%;border:1px solid #E0DBD2;background:#FFFDFA;border-radius:9px;padding:10px 11px;font-size:14px" />
+                        </div>
+                        <div>
+                          <div style="font-size:10.5px;font-weight:400;color:#9A9388;margin-bottom:5px">ส่วนลด</div>
+                          <input value="{{ d.eDisc }}" onChange="{{ d.onEDisc }}" inputmode="numeric" placeholder="0" style="width:100%;border:1px solid #E0DBD2;background:#FFFDFA;border-radius:9px;padding:10px 11px;font-size:14px" />
+                        </div>
+                        <div>
+                          <div style="font-size:10.5px;font-weight:400;color:#9A9388;margin-bottom:5px">ค่าส่ง</div>
+                          <input value="{{ d.eShip }}" onChange="{{ d.onEShip }}" inputmode="numeric" placeholder="0" style="width:100%;border:1px solid #E0DBD2;background:#FFFDFA;border-radius:9px;padding:10px 11px;font-size:14px" />
+                        </div>
+                      </div>
+                      <div>
+                        <div style="font-size:10.5px;font-weight:400;color:#9A9388;margin-bottom:5px">ช่องทางขาย</div>
+                        <select value="{{ d.eCh }}" onChange="{{ d.onECh }}" style="width:100%;border:1px solid #E0DBD2;background:#FFFDFA;border-radius:9px;padding:10px 11px;font-size:14px;color:#1B1A18">
+                          <sc-for list="{{ d.chOptions }}" as="o" hint-placeholder-count="3">
+                            <option value="{{ o.id }}">{{ o.label }}</option>
+                          </sc-for>
+                        </select>
+                      </div>
+                      <div style="font-size:10.5px;font-weight:300;color:#A19A8E;line-height:1.5">{{ d.editNote }}</div>
+                      <div style="display:flex;gap:8px">
+                        <button onClick="{{ d.saveEdit }}" style="flex:1;border:none;background:#1B1A18;color:#F6F4F0;border-radius:9px;padding:11px;font-size:12.5px;font-weight:500;cursor:pointer" style-hover="background:#332F2A">บันทึกการแก้ไข</button>
+                        <button onClick="{{ d.cancelEdit }}" style="flex:none;border:1px solid #E0DBD2;background:transparent;color:#8C867C;border-radius:9px;padding:11px 16px;font-size:12.5px;font-weight:400;cursor:pointer" style-hover="color:#1B1A18">ยกเลิก</button>
+                      </div>
                     </div>
-                    <button onClick="{{ d.del }}" style="border:1px solid #E8E3DA;background:#FDFCF9;color:#A19A8E;border-radius:8px;width:26px;height:26px;font-size:14px;line-height:1;cursor:pointer;flex:none" style-hover="color:#B4675C;border-color:#E3CFC9">×</button>
                   </div>
                 </sc-for>
               </div>
@@ -1132,7 +1172,8 @@ class Component extends DCLogic {
     xferFrom: WALLETS[0], xferTo: WALLETS[1], xferAmount: '',
     locked: true, pin: '', pinErr: '',
     sync: { state: 'local', msg: '' }, who: '',
-    fees: {}   /* ค่าคอมฯ ที่ร้านตั้งเอง แยกตามช่องทาง — ว่าง = ใช้ค่าตั้งต้นใน CHANNELS */
+    fees: {},  /* ค่าคอมฯ ที่ร้านตั้งเอง แยกตามช่องทาง — ว่าง = ใช้ค่าตั้งต้นใน CHANNELS */
+    editSaleId: '', editDraft: {}, resetArm: false
   };
 
   /* % ค่าธรรมเนียมของช่องทางนั้นในตอนนี้ (ที่ตั้งเอง ถ้าไม่มีก็ค่าตั้งต้น) */
@@ -1650,6 +1691,85 @@ class Component extends DCLogic {
     this.set({ sales: st.sales.filter(x => x.id !== id), products, pkg, toast: 'ลบรายการแล้ว · คืนสต็อกให้อัตโนมัติ' });
   }
 
+  /* ---- แก้ไขรายการขายที่บันทึกไปแล้ว ---- */
+  openEditSale(id) {
+    const s = this.state.sales.find(x => x.id === id);
+    if (!s) return;
+    this.setState({
+      editSaleId: id,
+      editDraft: {
+        qty: String(s.qty), price: String(s.price),
+        disc: String(s.disc || 0), ship: String(s.ship || 0), ch: s.ch
+      }
+    });
+  }
+  closeEditSale = () => this.setState({ editSaleId: '', editDraft: {} });
+  setEditDraft(field, v) {
+    this.setState({ editDraft: { ...(this.state.editDraft || {}), [field]: v } });
+  }
+
+  saveEditSale = () => {
+    const st = this.state;
+    const s = st.sales.find(x => x.id === st.editSaleId);
+    if (!s) return this.closeEditSale();
+    const d = st.editDraft || {};
+
+    const qty = Math.max(1, Math.round(num(d.qty)));
+    const price = Math.max(0, num(d.price));
+    const disc = Math.max(0, num(d.disc));
+    const ship = Math.max(0, num(d.ship));
+    const chName = (CHANNELS.find(c => c.name === d.ch) || { name: s.ch }).name;
+    /* เปลี่ยนช่องทาง = ใช้ % ปัจจุบันของช่องทางใหม่ · ช่องทางเดิม = คง % ของวันที่ขาย */
+    const fee = chName === s.ch ? s.fee : this.chFee(chName);
+
+    let products = st.products, pkg = st.pkg;
+    const dq = qty - s.qty;
+    const p = this.byId(s.sku);
+    if (p && !s.demo && dq !== 0) {
+      products = products.map(x => x.id === p.id ? { ...x, stock: x.stock - dq } : x);
+      const rule = this.rule(p.cat);
+      pkg = pkg.map(x => rule[x.name] ? { ...x, stock: x.stock - rule[x.name] * dq } : x);
+    }
+
+    this.set({
+      sales: st.sales.map(x => x.id === s.id ? { ...x, qty, price, disc, ship, ch: chName, fee } : x),
+      products, pkg, editSaleId: '', editDraft: {},
+      okBanner: 'แก้ไขรายการแล้ว' + (dq !== 0 && !s.demo ? ' · ปรับสต็อกให้ ' + (dq > 0 ? 'ลดลง ' : 'เพิ่มขึ้น ') + Math.abs(dq) + ' ชิ้น' : '')
+    });
+    setTimeout(() => this.setState({ okBanner: '' }), 3500);
+  };
+
+  /* ---- ล้างยอดขายทั้งวัน (กดสองครั้งเพื่อยืนยัน) ---- */
+  resetDay = () => {
+    const st = this.state;
+    const doomed = st.sales.filter(x => x.date === st.date);
+    if (!doomed.length) return;
+
+    if (!st.resetArm) {
+      this.setState({ resetArm: true });
+      clearTimeout(this._resetT);
+      this._resetT = setTimeout(() => this.setState({ resetArm: false }), 5000);
+      return;
+    }
+    clearTimeout(this._resetT);
+
+    let products = st.products, pkg = st.pkg;
+    doomed.forEach(s => {
+      if (s.demo) return;                       /* ข้อมูลตัวอย่างไม่เคยตัดสต็อก จึงไม่ต้องคืน */
+      const p = this.byId(s.sku); if (!p) return;
+      products = products.map(x => x.id === p.id ? { ...x, stock: x.stock + s.qty } : x);
+      const r = this.rule(p.cat);
+      pkg = pkg.map(x => r[x.name] ? { ...x, stock: x.stock + r[x.name] * s.qty } : x);
+    });
+
+    this.set({
+      sales: st.sales.filter(x => x.date !== st.date),
+      products, pkg, resetArm: false, editSaleId: '', editDraft: {},
+      okBanner: 'ล้างยอดวันที่ ' + thDate(st.date) + ' แล้ว ' + doomed.length + ' รายการ · คืนสต็อกให้อัตโนมัติ'
+    });
+    setTimeout(() => this.setState({ okBanner: '' }), 4000);
+  };
+
   editProduct(id, field, v) {
     this.set({ products: this.state.products.map(p => p.id === id ? { ...p, [field]: Math.max(0, num(v)) } : p) });
   }
@@ -2049,13 +2169,42 @@ class Component extends DCLogic {
       cartNet: nf(cNet) + ' ฿',
       cartNetColor: cNet >= 0 ? GREEN : RED,
       dayCount: dayList.length + ' รายการ · ' + nf(day.units) + ' ชิ้น',
+      resetDay: this.resetDay,
+      resetLabel: dayList.length === 0 ? '—' : st.resetArm ? 'แน่ใจ? กดอีกครั้ง' : 'ล้างยอดวันนี้',
+      resetStyle: dayList.length === 0
+        ? 'display:none'
+        : 'border:1px solid ' + (st.resetArm ? RED : '#E8E4DB') + ';background:' + (st.resetArm ? RED + '12' : 'transparent')
+          + ';color:' + (st.resetArm ? RED : '#A19A8E') + ';border-radius:8px;padding:5px 10px;font-size:11px;font-weight:400;cursor:pointer;white-space:nowrap',
+
       dayRows: [...dayList].reverse().map(s => {
         const p = this.byId(s.sku) || {}; const m = this.metrics(s);
+        const editing = st.editSaleId === s.id;
+        const ed = st.editDraft || {};
         return {
           name: (p.short || 'สินค้า') + (p.variant ? ' · ' + p.variant : ''),
-          meta: s.qty + ' ชิ้น · ' + s.ch + (s.demo ? ' · ตัวอย่าง' : ''),
+          meta: s.qty + ' ชิ้น · ' + s.ch + ' · ' + (s.fee || 0) + '%' + (s.demo ? ' · ตัวอย่าง' : ''),
           revenue: nf(m.gross) + ' ฿', net: (m.net >= 0 ? '+' : '') + nf(m.net) + ' ฿',
-          del: () => this.delSale(s.id)
+          del: () => this.delSale(s.id),
+
+          edit: () => editing ? this.closeEditSale() : this.openEditSale(s.id),
+          editBtnStyle: 'border:1px solid ' + (editing ? '#4B4459' : '#E8E3DA') + ';background:'
+            + (editing ? '#F1EEE7' : '#FDFCF9') + ';color:' + (editing ? '#4B4459' : '#A19A8E')
+            + ';border-radius:8px;width:26px;height:26px;font-size:12px;line-height:1;cursor:pointer;flex:none',
+          editStyle: editing ? 'display:grid;gap:10px;padding:2px 0 14px' : 'display:none',
+          eQty: editing ? ed.qty : '', ePrice: editing ? ed.price : '',
+          eDisc: editing ? ed.disc : '', eShip: editing ? ed.ship : '',
+          eCh: editing ? ed.ch : s.ch,
+          chOptions: CHANNELS.map(c => ({ id: c.name, label: c.name + ' · ' + this.chFee(c.name) + '%' })),
+          onEQty: e => this.setEditDraft('qty', e.target.value),
+          onEPrice: e => this.setEditDraft('price', e.target.value),
+          onEDisc: e => this.setEditDraft('disc', e.target.value),
+          onEShip: e => this.setEditDraft('ship', e.target.value),
+          onECh: e => this.setEditDraft('ch', e.target.value),
+          editNote: s.demo
+            ? 'รายการตัวอย่าง — แก้ได้แต่ไม่กระทบสต็อก'
+            : 'แก้จำนวนแล้วระบบปรับสต็อกสินค้าและแพคเกจให้อัตโนมัติ · เปลี่ยนช่องทางจะใช้ % ค่าคอมฯ ปัจจุบันของช่องทางใหม่',
+          saveEdit: this.saveEditSale,
+          cancelEdit: this.closeEditSale
         };
       }),
 
