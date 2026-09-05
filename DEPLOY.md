@@ -69,33 +69,47 @@ repo นี้เป็น **Public** — ใครก็อ่านโค้�
 
 ---
 
-## ขั้นที่ 4 — เชื่อม GitHub เข้ากับ Cloudflare Pages
+## ขั้นที่ 4 — เชื่อม GitHub เข้ากับ Cloudflare
+
+> Cloudflare รุ่นใหม่จะสร้างโปรเจกต์แบบ **Workers** ให้ (ไม่ใช่ Pages แบบเดิม)
+> URL ที่ได้จึงเป็น `.workers.dev` — ใช้งานเหมือนกันทุกอย่าง
 
 1. เปิด https://dash.cloudflare.com → สมัคร (ฟรี ไม่ต้องใส่บัตร)
-2. เมนูซ้าย **Workers & Pages** → **Create** → แท็บ **Pages** → **Connect to Git**
-3. อนุญาตให้ Cloudflare เข้าถึง GitHub → เลือก repo **`moonlab-base`** → **Begin setup**
+2. เมนูซ้าย **Workers & Pages** → **Create** → **Import a repository**
+3. อนุญาตให้ Cloudflare เข้าถึง GitHub → เลือก repo **`moonlab-base`**
 4. ตั้งค่าตามนี้ (สำคัญมาก):
 
    | ช่อง | ใส่ว่า |
    |---|---|
    | Production branch | `main` |
-   | Framework preset | `None` |
    | Build command | `bash build.sh` |
-   | Build output directory | `public` |
+   | Deploy command | `npx wrangler deploy` |
+   | Root directory | `/` |
 
-5. กด **Environment variables (advanced)** → **Add variable** ทีละตัว 3 ตัว:
+5. หา **Build variables and secrets** — ต้องเป็นกล่องที่อยู่**ใต้หัวข้อ Builds** เท่านั้น
+   (ในหน้า Settings จะมีคำว่า *Variables and secrets* สองที่ อีกอันเป็นของ runtime ใช้ไม่ได้)
 
-   | Variable name | Value | ประเภท |
+   กด **+ Add** ทีละตัว 3 ตัว:
+
+   | Type | Variable name | Value |
    |---|---|---|
-   | `SUPABASE_URL` | `https://xxxxx.supabase.co` | Text |
-   | `SUPABASE_ANON_KEY` | `eyJ...` (anon key) | **Secret** (กดปุ่ม Encrypt) |
-   | `APP_TOKEN` | รหัสลับจากขั้นที่ 2 | **Secret** (กดปุ่ม Encrypt) |
+   | Variable | `SUPABASE_URL` | `https://xxxxx.supabase.co` |
+   | Secret | `SUPABASE_ANON_KEY` | คีย์ที่ขึ้นต้นด้วย `sb_publishable_` หรือ `eyJ` |
+   | Secret | `APP_TOKEN` | รหัสลับจากขั้นที่ 2 |
 
-6. **Save and Deploy** → รอประมาณ 1 นาที
-7. ได้ลิงก์ `https://moonlab-base.pages.dev` ← เว็บของคุณแล้ว 🎉
+   แล้ว **กด Save** ของกล่องนั้นด้วย จากนั้นรีเฟรชหน้าเช็คว่าขึ้น `Value encrypted` จริง
+
+6. รอ build เสร็จ (~1 นาที) → ได้ลิงก์ `https://moonlab-base.<ชื่อคุณ>.workers.dev` 🎉
 
 **อัปเดตครั้งต่อไป:** แก้โค้ด → `git push` → Cloudflare build ให้เองอัตโนมัติภายใน 1 นาที
-ไม่ต้องลากไฟล์ ไม่ต้องกดอะไรเพิ่ม
+
+### ข้อควรระวังที่เจอมาแล้ว
+
+- **ตัวแปรมีผลเฉพาะ build รอบใหม่** — เปลี่ยนค่าแล้วต้องสั่ง build ใหม่เสมอ
+- **commit เปล่าๆ ไม่กระตุ้น build** — ต้องมีไฟล์เปลี่ยนจริง หรือกด Retry build ในแท็บ Deployments
+- **ปุ่ม New deployment คือการลากไฟล์ขึ้นเอง** ซึ่งจะข้าม `build.sh` ทำให้ `config.js` ว่าง — อย่าใช้
+- **เช็คค่าที่ Cloudflare ส่งเข้ามาได้จาก build log** จะมีบล็อก `--- ตรวจค่าที่ได้รับ ---`
+  บอกความยาวของแต่ละตัวแปร (ไม่โชว์ค่าจริง) ถ้า `SUPABASE_ANON_KEY` สั้นกว่า 40 ตัว = คัดลอกผิดช่อง
 
 ---
 
