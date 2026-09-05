@@ -10,6 +10,12 @@
 (function () {
   'use strict';
 
+  /* ตัวรันของ design canvas จะคัดลอกสคริปต์ใน <helmet> ไปใส่ <head> อีกรอบ
+     ทำให้ไฟล์นี้ถูกรันสองครั้ง ถ้าปล่อยไว้ ตัวที่รันทีหลังจะทับตัวแรกที่แอปตั้งค่าไว้แล้ว
+     กลายเป็นตัวเปล่าไม่มีรหัสฐานข้อมูล → บันทึกอะไรไปก็ไม่ขึ้นคลาวด์
+     กันด้วยการออกทันทีถ้ามีตัวเดิมอยู่แล้ว */
+  if (window.MoonlabCloud) return;
+
   var CACHE_KEY = 'moonlab_stock_v1';
   var VER_KEY = 'moonlab_versions_v1';
   var OUT_KEY = 'moonlab_outbox_v1';

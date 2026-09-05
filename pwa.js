@@ -1,5 +1,7 @@
 /* ลงทะเบียน service worker — ทำงานเฉพาะตอนเปิดผ่าน https (หรือ localhost) เท่านั้น */
 (function () {
+  if (window.__moonlabPwaInit) return;   /* ไฟล์นี้ถูกรันสองรอบเหมือน cloud.js */
+  window.__moonlabPwaInit = true;
   if (!('serviceWorker' in navigator)) return;
   if (location.protocol !== 'https:' && location.hostname !== 'localhost' && location.hostname !== '127.0.0.1') return;
   window.addEventListener('load', function () {
