@@ -1,0 +1,20 @@
+# รหัสลับ — ห้ามขึ้น GitHub เด็ดขาด (repo นี้เป็น public)
+config.js
+
+# ผลลัพธ์จากการ build (Cloudflare สร้างเองทุกครั้ง)
+public/
+
+# ไฟล์ที่เคยอัปโหลดตอนนำเข้าข้อมูล — เป็นข้อมูลร้าน ไม่ควรขึ้นเว็บสาธารณะ
+uploads/
+tmp/
+
+# ไฟล์ระบบ
+.thumbnail
+.image-slots.state.json
+Thumbs.db
+.DS_Store
+
+# ไฟล์ส่วนตัวที่มีรหัสลับ
+*.local.sql
+*.local.js
+setup-real.sql

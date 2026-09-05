@@ -1,7 +1,7 @@
-﻿/* MOONLAB Stock — service worker
+/* MOONLAB Stock — service worker
    เปิดแอปได้แม้เน็ตหลุด และโหลดเร็วขึ้นมากบนไอโฟน/ไอแพด (React + Babel ถูก cache ไว้)
    VERSION ถูกแทนค่าอัตโนมัติตอน build.ps1 */
-var VERSION = '20260905-1508';
+var VERSION = '__BUILD__';
 var SHELL = 'moonlab-shell-' + VERSION;
 var LIB = 'moonlab-lib-v1';
 
