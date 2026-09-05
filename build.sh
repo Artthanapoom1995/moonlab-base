@@ -28,11 +28,29 @@ sed "s/__BUILD__/$STAMP/" sw.js > "$OUT/sw.js"
 
 if [ -z "$SUPABASE_URL" ] || [ -z "$SUPABASE_ANON_KEY" ] || [ -z "$APP_TOKEN" ]; then
   echo ""
-  echo "!! ยังไม่ได้ตั้ง Environment variables ใน Cloudflare Pages"
+  echo "!! ยังไม่ได้ตั้ง Environment variables ใน Cloudflare"
   echo "!! ต้องมี: SUPABASE_URL, SUPABASE_ANON_KEY, APP_TOKEN"
   echo "!! เว็บจะ deploy ได้ แต่ข้อมูลจะยังไม่แชร์ระหว่างเครื่อง"
   echo ""
 fi
+
+# ตรวจรูปแบบคร่าวๆ เพื่อกันใส่ค่าผิดช่อง (ไม่พิมพ์ค่าจริงออก log)
+echo "--- ตรวจค่าที่ได้รับ ---"
+echo "SUPABASE_URL      : ${#SUPABASE_URL} ตัวอักษร"
+echo "SUPABASE_ANON_KEY : ${#SUPABASE_ANON_KEY} ตัวอักษร"
+echo "APP_TOKEN         : ${#APP_TOKEN} ตัวอักษร"
+
+case "$SUPABASE_URL" in
+  https://*.supabase.co) ;;
+  "") ;;
+  *) echo "!! SUPABASE_URL ผิดรูปแบบ ต้องเป็น https://xxxxx.supabase.co" ;;
+esac
+
+if [ -n "$SUPABASE_ANON_KEY" ] && [ "${#SUPABASE_ANON_KEY}" -lt 40 ]; then
+  echo "!! SUPABASE_ANON_KEY สั้นผิดปกติ (${#SUPABASE_ANON_KEY} ตัว) — ของจริงยาวเกิน 100 ตัว"
+  echo "!! น่าจะคัดลอกผิดช่อง ต้องเป็น Publishable key (sb_publishable_...) หรือ anon key (eyJ...)"
+fi
+echo "-----------------------"
 
 cat > "$OUT/config.js" <<EOF
 /* สร้างอัตโนมัติตอน deploy — อย่าแก้ไฟล์นี้ */
