@@ -331,6 +331,12 @@
                     <button onClick="{{ c.go }}" style="{{ c.style }}">{{ c.label }}</button>
                   </sc-for>
                 </div>
+                <div style="display:flex;align-items:center;gap:10px;margin-top:12px;padding:11px 13px;background:#FDFCF9;border:1px solid #E8E4DB;border-radius:10px">
+                  <div style="font-size:11.5px;font-weight:400;color:#9A9388;flex:1;min-width:0">ค่าคอมฯ {{ feeChannel }}</div>
+                  <input value="{{ feeValue }}" onChange="{{ onFee }}" inputmode="decimal" placeholder="0" style="width:66px;border:1px solid #E0DBD2;background:#FFFDFA;border-radius:8px;padding:9px 10px;font-size:14px;text-align:right" />
+                  <div style="font-size:13px;font-weight:400;color:#8C867C">%</div>
+                </div>
+                <div style="font-size:11px;font-weight:300;color:#A19A8E;margin-top:6px;line-height:1.5">{{ feeNote }}</div>
               </div>
               <div style="font-size:11.5px;font-weight:300;color:#A19A8E;text-align:center;min-height:16px">{{ toast }}</div>
             </div>
@@ -1125,8 +1131,25 @@ class Component extends DCLogic {
     ledger: [], newLedgerDate: today(), newLedgerType: 'income', newLedgerAmount: '', newLedgerNote: '', newLedgerWallet: WALLETS[0],
     xferFrom: WALLETS[0], xferTo: WALLETS[1], xferAmount: '',
     locked: true, pin: '', pinErr: '',
-    sync: { state: 'local', msg: '' }, who: ''
+    sync: { state: 'local', msg: '' }, who: '',
+    fees: {}   /* ค่าคอมฯ ที่ร้านตั้งเอง แยกตามช่องทาง — ว่าง = ใช้ค่าตั้งต้นใน CHANNELS */
   };
+
+  /* % ค่าธรรมเนียมของช่องทางนั้นในตอนนี้ (ที่ตั้งเอง ถ้าไม่มีก็ค่าตั้งต้น) */
+  chFee(name) {
+    const f = (this.state.fees || {})[name];
+    if (f !== undefined && f !== null && f !== '') return num(f);
+    const c = CHANNELS.find(x => x.name === name);
+    return c ? c.fee : 0;
+  }
+
+  setFee(name, v) {
+    const fees = { ...(this.state.fees || {}) };
+    const s = String(v).trim();
+    if (s === '') delete fees[name];                       /* ล้างช่อง = กลับไปใช้ค่าตั้งต้น */
+    else fees[name] = Math.max(0, Math.min(100, num(s)));  /* กันพิมพ์เกิน 100% หรือติดลบ */
+    this.set({ fees });
+  }
 
   addLedger = () => {
     const amt = num(this.state.newLedgerAmount);
@@ -1281,7 +1304,7 @@ class Component extends DCLogic {
     const st = this.state;
     return {
       products: st.products, sales: st.sales, pkg: st.pkg, adSpend: st.adSpend, rules: st.rules,
-      importedOrders: st.importedOrders, tasks: st.tasks, orders: st.orders, ledger: st.ledger
+      importedOrders: st.importedOrders, tasks: st.tasks, orders: st.orders, ledger: st.ledger, fees: st.fees
     };
   }
 
@@ -1307,7 +1330,8 @@ class Component extends DCLogic {
       products: this.normProducts(saved.products), sales,
       pkg: saved.pkg || PKG_DEFAULT.map(p => ({ ...p })), adSpend,
       rules: saved.rules || RULES, importedOrders: saved.importedOrders || [],
-      tasks: saved.tasks || [], orders: saved.orders || [], ledger: saved.ledger || [], loaded: true
+      tasks: saved.tasks || [], orders: saved.orders || [], ledger: saved.ledger || [],
+      fees: saved.fees || {}, loaded: true
     }, () => { if (shift > 0) this.persist(); });
   }
 
@@ -1436,7 +1460,7 @@ class Component extends DCLogic {
       const p = products.find(x => x.id === r.sku); if (!p) return;
       const qty = Math.max(1, Math.round(num(r.qty)));
       const price = num(r.price) || p.price;
-      sales.push({ id: 'lb' + Date.now() + '_' + i, date: r.date, sku: p.id, qty, price, disc: 0, ship: 0, ch: ch.name, fee: ch.fee, oid: r.oid });
+      sales.push({ id: 'lb' + Date.now() + '_' + i, date: r.date, sku: p.id, qty, price, disc: 0, ship: 0, ch: ch.name, fee: this.chFee(ch.name), oid: r.oid });
       products = products.map(x => x.id === p.id ? { ...x, stock: x.stock - qty } : x);
       const rule = this.rule(p.cat);
       pkg = pkg.map(x => rule[x.name] ? { ...x, stock: x.stock - rule[x.name] * qty } : x);
@@ -1560,6 +1584,7 @@ class Component extends DCLogic {
     const st = this.state;
     if (!st.cart.length) return;
     const ch = CHANNELS.find(c => c.name === st.ch) || CHANNELS[0];
+    const chFeePct = this.chFee(ch.name);   /* เก็บ % ณ วันที่ขายติดไปกับรายการ ปรับ % ทีหลังจึงไม่กระทบยอดเก่า */
     const stamp = Date.now();
 
     const lines = st.cart.map(c => {
@@ -1587,7 +1612,7 @@ class Component extends DCLogic {
 
       sales.push({
         id: 's' + stamp + '_' + i, date: st.date, sku: l.p.id, qty: l.c.qty,
-        price: l.price, disc: d, ship: sh, ch: ch.name, fee: ch.fee
+        price: l.price, disc: d, ship: sh, ch: ch.name, fee: chFeePct
       });
 
       products = products.map(x => x.id === l.p.id ? { ...x, stock: x.stock - l.c.qty } : x);
@@ -1687,6 +1712,7 @@ class Component extends DCLogic {
     list30.forEach(s => { sold30[s.sku] = (sold30[s.sku] || 0) + s.qty; });
 
     const ch = CHANNELS.find(c => c.name === st.ch) || CHANNELS[0];
+    const chFee = this.chFee(ch.name);
     const inCart = {};
     st.cart.forEach(c => { inCart[c.sku] = c.qty; });
     let cUnits = 0, cSub = 0, cCost = 0, cPkg = 0;
@@ -1696,7 +1722,7 @@ class Component extends DCLogic {
       cUnits += c.qty; cSub += pr * c.qty; cCost += p.cost * c.qty; cPkg += this.pkgUnitCost(p.cat) * c.qty;
     });
     const cGross = cSub - num(st.disc);
-    const cFee = cGross * ch.fee / 100;
+    const cFee = cGross * chFee / 100;
     const cNet = cGross - cCost - cFee - cPkg - num(st.ship);
 
     const cats = ['ทั้งหมด', ...Object.keys(RULES).filter(c => P.some(p => p.cat === c))];
@@ -1834,7 +1860,15 @@ class Component extends DCLogic {
           planShowCats: { ...s.planShowCats, [c]: !s.planShowCats[c] }
         }))
       })),
-      channels: CHANNELS.map(c => ({ label: c.name, style: pill(st.ch === c.name), go: () => this.setState({ ch: c.name }) })),
+      channels: CHANNELS.map(c => ({
+        label: c.name + ' · ' + this.chFee(c.name) + '%',
+        style: pill(st.ch === c.name),
+        go: () => this.setState({ ch: c.name })
+      })),
+      feeChannel: ch.name,
+      feeValue: (st.fees || {})[ch.name] !== undefined ? String((st.fees || {})[ch.name]) : String(chFee),
+      onFee: e => this.setFee(ch.name, e.target.value),
+      feeNote: 'ปรับได้เมื่อแพลตฟอร์มเปลี่ยนอัตรา · ยอดขายที่บันทึกไปแล้วยังใช้ % เดิมของวันนั้น · เว้นว่างเพื่อกลับไปใช้ค่าตั้งต้น ' + ((CHANNELS.find(c => c.name === ch.name) || {}).fee || 0) + '%',
       catFilters: cats.map(c => ({ label: c, style: pill(st.cat === c), go: () => this.setState({ cat: c }) })),
 
       dayKpis: [
@@ -1953,7 +1987,7 @@ class Component extends DCLogic {
       cartRows: st.cart.map(c => {
         const p = this.byId(c.sku) || {};
         const pr = num(c.price) || p.price || 0;
-        const net = pr * c.qty - (p.cost || 0) * c.qty - pr * c.qty * ch.fee / 100 - this.pkgUnitCost(p.cat) * c.qty;
+        const net = pr * c.qty - (p.cost || 0) * c.qty - pr * c.qty * chFee / 100 - this.pkgUnitCost(p.cat) * c.qty;
         return {
           name: (p.short || '') + (p.variant ? ' · ' + p.variant : ''),
           meta: (p.cat || '') + ' · เหลือ ' + (p.stock != null ? p.stock : '—') + ' ชิ้น',
@@ -1970,7 +2004,7 @@ class Component extends DCLogic {
         { label: 'ยอดขายหลังส่วนลด', value: nf(cGross) + ' ฿', color: INK },
         { label: 'ต้นทุนสินค้า', value: '−' + nf(cCost) + ' ฿', color: '#6E6860' },
         { label: 'ค่าแพคเกจ', value: '−' + nf(cPkg) + ' ฿', color: '#6E6860' },
-        { label: 'ค่าธรรมเนียม ' + ch.name + ' ' + ch.fee + '%', value: '−' + nf(cFee) + ' ฿', color: '#6E6860' },
+        { label: 'ค่าธรรมเนียม ' + ch.name + ' ' + chFee + '%', value: '−' + nf(cFee) + ' ฿', color: '#6E6860' },
         { label: 'ค่าส่ง', value: '−' + nf(num(st.ship)) + ' ฿', color: '#6E6860' }
       ],
       saveCart: this.saveCart,

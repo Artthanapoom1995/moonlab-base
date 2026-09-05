@@ -33,7 +33,8 @@
     tasks: { type: 'list', id: 'id' },
     importedOrders: { type: 'set' },
     adSpend: { type: 'map' },
-    rules: { type: 'map' }
+    rules: { type: 'map' },
+    fees: { type: 'map' }
   };
   var KEYS = Object.keys(SCHEMA);
 
