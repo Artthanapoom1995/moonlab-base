@@ -1290,15 +1290,17 @@ class Component extends DCLogic {
       cloud.start({ onRemote: this.onRemote, onStatus: this.onSyncStatus });
     }
 
-    /* 1) cache ในเครื่อง — ให้เปิดมาเห็นข้อมูลทันทีแม้เน็ตช้าหรือไม่มีเน็ต */
+    /* 1) cache ในเครื่อง — ให้เปิดมาเห็นข้อมูลทันทีแม้เน็ตช้าหรือไม่มีเน็ต
+       เช็คแค่ว่า "เคยตั้งค่าไว้แล้วหรือยัง" ไม่ใช่ว่ามีสินค้ากี่ตัว
+       ไม่งั้นพอล้างข้อมูลจนหมด ระบบจะเข้าใจว่าเป็นการเปิดครั้งแรกแล้วสร้างข้อมูลตัวอย่างขึ้นมาใหม่ */
     const saved = cloud ? cloud.cached() : null;
-    const hadLocal = !!(saved && saved.products && saved.products.length);
+    const hadLocal = !!(saved && Array.isArray(saved.products));
     if (hadLocal) this.applySaved(saved);
 
     /* 2) ของจริงจากคลาวด์ (ทับ cache ถ้ามี) */
     if (online) {
       const remote = await cloud.load();
-      if (remote && remote.products && remote.products.length) { this.applySaved(remote); return; }
+      if (remote) { this.applySaved(remote); return; }        /* คลาวด์เคยถูกใช้แล้ว แม้จะว่างเปล่าก็ถือว่าเริ่มต้นแล้ว */
       if (hadLocal) { cloud.seed(this.snapshot()); return; }   /* คลาวด์ยังว่าง → อัปของเครื่องนี้ขึ้นไปตั้งต้น */
     }
     if (hadLocal) return;
@@ -1520,11 +1522,11 @@ class Component extends DCLogic {
     const file = e.target.files?.[0];
     if (!file) return;
     const reader = new FileReader();
-    reader.onload = ev => {
+    reader.onload = async ev => {
       try {
         const buf = ev.target?.result;
         if (!buf) return;
-        const wb = this.parseXlsx(buf);
+        const wb = await this.parseXlsx(buf);
         const ws = wb[Object.keys(wb)[0]];
         const rows = [];
         const headers = ws[0] || [];
@@ -1535,12 +1537,12 @@ class Component extends DCLogic {
           const row = ws[i] || [];
           const name = row[nameIdx >= 0 ? nameIdx : 0] || '';
           const qty = Math.max(1, Math.round(parseFloat(row[qtyIdx >= 0 ? qtyIdx : 1]) || 1));
-          const date = row[dateIdx >= 0 ? dateIdx : 2] || today();
+          const date = this.xlsxDate(row[dateIdx >= 0 ? dateIdx : 2]) || today();
           if (name) rows.push({ name: String(name).trim(), variant: '', qty, date, oid: 'ex' + i, raw: name });
         }
         this.setState({ importRows: this.matchRows(rows), importedOrders: rows, excelNote: rows.length + ' รายการจากไฟล์ Excel' });
       } catch (err) {
-        this.setState({ excelNote: 'ไม่สามารถอ่านไฟล์ได้ ตรวจสอบรูปแบบ Excel' });
+        this.setState({ excelNote: 'อ่านไฟล์ไม่สำเร็จ: ' + (err && err.message ? err.message : 'ตรวจสอบรูปแบบ Excel') });
       }
     };
     reader.readAsArrayBuffer(file);
@@ -1552,32 +1554,92 @@ class Component extends DCLogic {
     if (!file) return;
     this.setState({ itemsExcelNote: 'กำลังอ่านไฟล์ ' + file.name + ' …' });
     const reader = new FileReader();
-    reader.onload = ev => {
+    reader.onload = async ev => {
       try {
         const buf = ev.target?.result;
         if (!buf) return;
-        const wb = this.parseXlsx(buf);
+        const wb = await this.parseXlsx(buf);
         const ws = wb[Object.keys(wb)[0]];
-        const headers = ws[0] || [];
-        const nameIdx = headers.findIndex(h => /name|ชื่อ|สินค้า/i.test(h));
-        const priceIdx = headers.findIndex(h => /price|ราคา|ขาย/i.test(h));
-        const costIdx = headers.findIndex(h => /cost|ต้นทุน|ทุน|cogs/i.test(h));
-        let updated = 0;
-        let products = this.state.products;
-        for (let i = 1; i < ws.length; i++) {
+
+        /* ไฟล์จากแพลตฟอร์มมักมีบรรทัดคำอธิบายนำหน้าหลายบรรทัด
+           จึงไล่หาบรรทัดหัวตารางจริงใน 12 บรรทัดแรก แทนที่จะเชื่อว่าเป็นบรรทัดที่ 1 */
+        const looksLikeHeader = r => {
+          const cells = (r || []).map(c => String(c || ''));
+          const hasName = cells.some(c => /name|ชื่อ|สินค้า|รายการ/i.test(c));
+          const hasMoney = cells.some(c => /price|ราคา|ขาย|cost|ต้นทุน|ทุน|stock|คงเหลือ|สต็อก|จำนวน/i.test(c));
+          return hasName && hasMoney;
+        };
+        let headerRow = 0;
+        for (let i = 0; i < Math.min(12, ws.length); i++) { if (looksLikeHeader(ws[i])) { headerRow = i; break; } }
+
+        const headers = (ws[headerRow] || []).map(h => String(h || ''));
+        const col = (re, dflt) => { const i = headers.findIndex(h => re.test(h)); return i >= 0 ? i : dflt; };
+        const nameIdx = col(/name|ชื่อ|สินค้า|รายการ/i, 0);
+        const priceIdx = col(/price|ราคา|ขาย/i, 1);
+        const costIdx = col(/cost|ต้นทุน|ทุน|cogs/i, 2);
+        const stockIdx = col(/stock|คงเหลือ|สต็อก|จำนวน|qty|quantity/i, -1);
+        const catIdx = col(/cat|หมวด|ประเภท|category/i, -1);
+        const varIdx = col(/variant|ตัวเลือก|รุ่นย่อย|สี|แบบ/i, -1);
+        const skuIdx = col(/^sku$|รหัสสินค้า|รหัส/i, -1);
+
+        const cell = (row, i) => i >= 0 ? String(row[i] === undefined || row[i] === null ? '' : row[i]).trim() : '';
+        const key = s => normTh(String(s || '')).toLowerCase();
+
+        let products = this.state.products.slice();
+        let updated = 0, added = 0, noCost = 0, skipped = 0;
+
+        for (let i = headerRow + 1; i < ws.length; i++) {
           const row = ws[i] || [];
-          const name = String(row[nameIdx >= 0 ? nameIdx : 0] || '').trim();
-          const price = num(row[priceIdx >= 0 ? priceIdx : 1]);
-          const cost = num(row[costIdx >= 0 ? costIdx : 2]);
+          const name = cell(row, nameIdx);
           if (!name) continue;
-          const match = products.find(p => p.name.toLowerCase().indexOf(name.toLowerCase()) >= 0 || name.toLowerCase().indexOf(p.short.toLowerCase()) >= 0);
-          if (match && (price > 0 || cost > 0)) {
-            products = products.map(p => p.id === match.id ? { ...p, ...(price > 0 && { price }), ...(cost > 0 && { cost }) } : p);
+          /* กันบรรทัดคำอธิบาย/เงื่อนไขที่ปนมาในเทมเพลต ไม่ให้กลายเป็นสินค้า */
+          if (name.length > 120 || /[\n•]/.test(name)) { skipped++; continue; }
+          const price = num(row[priceIdx]);
+          const cost = num(row[costIdx]);
+          const variant = cell(row, varIdx);
+          const cat = cell(row, catIdx);
+          const sku = cell(row, skuIdx);
+          const stock = stockIdx >= 0 ? Math.max(0, Math.round(num(row[stockIdx]))) : null;
+
+          /* จับคู่ด้วยรหัสสินค้าก่อน แล้วค่อยชื่อ+ตัวเลือกแบบตรงตัว สุดท้ายจึงเดาจากชื่อบางส่วน */
+          let match = sku ? products.find(p => String(p.id) === sku) : null;
+          if (!match) match = products.find(p => key(p.name) === key(name) && key(p.variant) === key(variant));
+          if (!match && !variant) match = products.find(p => key(p.name) === key(name));
+          if (!match) {
+            match = products.find(p => key(p.name).indexOf(key(name)) >= 0 || (p.short && key(name).indexOf(key(p.short)) >= 0));
+            if (match && variant && key(match.variant) !== key(variant)) match = null;
+          }
+
+          if (match) {
+            products = products.map(p => p.id === match.id ? {
+              ...p,
+              ...(price > 0 && { price }),
+              ...(cost > 0 && { cost }),
+              ...(cat && { cat }),
+              ...(stock !== null && { stock })
+            } : p);
             updated++;
+          } else {
+            /* สินค้าใหม่ต้องมีตัวเลขอย่างน้อยหนึ่งอย่าง ไม่งั้นถือว่าเป็นบรรทัดขยะ */
+            if (!(price > 0 || cost > 0 || (stock !== null && stock > 0))) { skipped++; continue; }
+            products.push({
+              id: sku || 'x' + Date.now() + '_' + i,
+              name, short: shortName(name), cat, variant,
+              price, cost, stock: stock === null ? 0 : stock
+            });
+            added++;
+            if (!(cost > 0)) noCost++;
           }
         }
+
         this.set({ products });
-        this.setState({ itemsExcelNote: 'อัพเดทแล้ว ' + updated + ' รายการจากไฟล์ ' + file.name });
+        const parts = [];
+        if (added) parts.push('เพิ่มสินค้าใหม่ ' + added + ' รายการ');
+        if (updated) parts.push('อัพเดท ' + updated + ' รายการ');
+        if (!parts.length) parts.push('ไม่พบรายการที่อ่านได้ — ต้องมีคอลัมน์ชื่อสินค้า และราคา/ต้นทุน/จำนวน อย่างน้อยหนึ่งอย่าง');
+        if (skipped) parts.push('ข้ามบรรทัดที่ไม่ใช่สินค้า ' + skipped + ' บรรทัด');
+        if (noCost) parts.push('⚠️ ' + noCost + ' รายการยังไม่มีต้นทุน กำไรจะยังไม่ตรงจนกว่าจะใส่');
+        this.setState({ itemsExcelNote: parts.join(' · ') + ' (' + file.name + ')' });
       } catch (err) {
         this.setState({ itemsExcelNote: 'อ่านไฟล์ไม่สำเร็จ: ' + (err && err.message ? err.message : 'ไฟล์อาจไม่ใช่ Excel') });
       }
@@ -1585,24 +1647,122 @@ class Component extends DCLogic {
     reader.readAsArrayBuffer(file);
   };
 
-  parseXlsx(buf) {
-    const XLSX_MAGIC = [0x50, 0x4B, 0x03, 0x04];
+  /* ---- อ่านไฟล์ .xlsx จริง ----
+     ไฟล์ xlsx คือ zip ที่ข้างในเป็น xml — แกะ zip เอง แล้วคลายบีบอัดด้วย DecompressionStream
+     ของเบราว์เซอร์ จึงไม่ต้องพึ่งไลบรารีข้างนอกและใช้ได้ตอนออฟไลน์ */
+  async unzip(buf) {
     const view = new Uint8Array(buf);
-    const ok = view.length > 4 && view[0] === XLSX_MAGIC[0] && view[1] === XLSX_MAGIC[1];
-    if (!ok) throw new Error('Invalid Excel file');
-    let sheetXml = null, rels = null;
-    try {
-      const zip = {};
-      const cen = new DataView(buf).byteLength;
-      for (let i = 0; i < Math.min(10, cen); i++) {
-        if (view[i + 4] === 0x77 && view[i + 5] === 0x6F && view[i + 6] === 0x72 && view[i + 7] === 0x6B) {
-          sheetXml = buf.slice(i - 4, i + 500);
-          break;
+    const dv = new DataView(buf);
+    if (view.length < 22 || view[0] !== 0x50 || view[1] !== 0x4B) throw new Error('ไม่ใช่ไฟล์ Excel (.xlsx)');
+
+    /* หา End of Central Directory จากท้ายไฟล์ */
+    let eocd = -1;
+    for (let i = view.length - 22; i >= 0 && i > view.length - 66000; i--) {
+      if (dv.getUint32(i, true) === 0x06054b50) { eocd = i; break; }
+    }
+    if (eocd < 0) throw new Error('ไฟล์ Excel เสียหาย (หา directory ไม่เจอ)');
+
+    const count = dv.getUint16(eocd + 10, true);
+    let ptr = dv.getUint32(eocd + 16, true);
+    const dec = new TextDecoder('utf-8');
+    const out = {};
+
+    for (let n = 0; n < count; n++) {
+      if (dv.getUint32(ptr, true) !== 0x02014b50) break;
+      const method = dv.getUint16(ptr + 10, true);
+      const compSize = dv.getUint32(ptr + 20, true);
+      const nameLen = dv.getUint16(ptr + 28, true);
+      const extraLen = dv.getUint16(ptr + 30, true);
+      const commentLen = dv.getUint16(ptr + 32, true);
+      const localOff = dv.getUint32(ptr + 42, true);
+      const name = dec.decode(view.subarray(ptr + 46, ptr + 46 + nameLen));
+
+      if (/^xl\/(worksheets\/sheet1\.xml|sharedStrings\.xml|workbook\.xml)$/.test(name)) {
+        const lNameLen = dv.getUint16(localOff + 26, true);
+        const lExtraLen = dv.getUint16(localOff + 28, true);
+        const start = localOff + 30 + lNameLen + lExtraLen;
+        const raw = view.subarray(start, start + compSize);
+        if (method === 0) {
+          out[name] = dec.decode(raw);
+        } else if (method === 8) {
+          if (typeof DecompressionStream === 'undefined') throw new Error('เบราว์เซอร์รุ่นนี้อ่าน .xlsx ไม่ได้ ลองอัพเดท iOS/Safari');
+          const ds = new DecompressionStream('deflate-raw');
+          const blob = new Blob([raw]).stream().pipeThrough(ds);
+          out[name] = dec.decode(new Uint8Array(await new Response(blob).arrayBuffer()));
         }
       }
-    } catch (e) { }
-    return { Sheet1: [['ชื่อสินค้า', 'จำนวน'], ['ทดสอบ', '1']] };
-  };
+      ptr += 46 + nameLen + extraLen + commentLen;
+    }
+    return out;
+  }
+
+  async parseXlsx(buf) {
+    const files = await this.unzip(buf);
+    const sheet = files['xl/worksheets/sheet1.xml'];
+    if (!sheet) throw new Error('ไม่พบชีตแรกในไฟล์');
+
+    const parse = xml => new DOMParser().parseFromString(xml, 'application/xml');
+
+    /* ตารางข้อความรวม — เซลล์ที่เป็นตัวหนังสือส่วนใหญ่เก็บเป็น index ชี้มาที่นี่ */
+    const shared = [];
+    if (files['xl/sharedStrings.xml']) {
+      const sd = parse(files['xl/sharedStrings.xml']);
+      sd.querySelectorAll('si').forEach(si => {
+        let s = '';
+        si.querySelectorAll('t').forEach(t => { s += t.textContent; });
+        shared.push(s);
+      });
+    }
+
+    const colIndex = ref => {
+      const m = /^([A-Z]+)/.exec(ref || '');
+      if (!m) return 0;
+      let n = 0;
+      for (const ch of m[1]) n = n * 26 + (ch.charCodeAt(0) - 64);
+      return n - 1;
+    };
+
+    const doc = parse(sheet);
+    const err = doc.querySelector('parsererror');
+    if (err) throw new Error('อ่าน XML ในไฟล์ไม่ได้');
+
+    const rows = [];
+    doc.querySelectorAll('row').forEach(r => {
+      const arr = [];
+      r.querySelectorAll('c').forEach(c => {
+        const i = colIndex(c.getAttribute('r'));
+        const t = c.getAttribute('t');
+        let v = '';
+        if (t === 'inlineStr') {
+          c.querySelectorAll('is t').forEach(x => { v += x.textContent; });
+        } else {
+          const el = c.querySelector('v');
+          v = el ? el.textContent : '';
+          if (t === 's') v = shared[parseInt(v, 10)] !== undefined ? shared[parseInt(v, 10)] : '';
+        }
+        arr[i] = v;
+      });
+      for (let i = 0; i < arr.length; i++) if (arr[i] === undefined) arr[i] = '';
+      rows.push(arr);
+    });
+
+    while (rows.length && rows[rows.length - 1].every(c => String(c).trim() === '')) rows.pop();
+    if (!rows.length) throw new Error('ไฟล์ว่างเปล่า ไม่มีข้อมูลในชีตแรก');
+    return { Sheet1: rows };
+  }
+
+  /* Excel เก็บวันที่เป็นตัวเลขนับวันจากปี 1900 — แปลงกลับเป็น YYYY-MM-DD */
+  xlsxDate(v) {
+    const s = String(v || '').trim();
+    if (/^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(0, 10);
+    const n = parseFloat(s);
+    if (isFinite(n) && n > 20000 && n < 80000) {
+      const d = new Date(Date.UTC(1899, 11, 30) + Math.round(n) * 86400000);
+      return d.toISOString().slice(0, 10);
+    }
+    const d = new Date(s);
+    return isNaN(d.getTime()) ? '' : d.toISOString().slice(0, 10);
+  }
 
   addToCart(id) {
     const p = this.byId(id); if (!p) return;
