@@ -1,0 +1,2253 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<script src="./image-slot.js"></script>
+<script src="./config.js"></script>
+<script src="./cloud.js"></script>
+<script src="./pwa.js"></script>
+<link rel="manifest" href="./manifest.webmanifest" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="default" />
+<meta name="apple-mobile-web-app-title" content="MOONLAB" />
+<meta name="theme-color" content="#F6F4F0" />
+<link rel="apple-touch-icon" href="./icon-180.png" />
+<link rel="icon" href="./icon-192.png" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="" />
+<link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600&display=swap" rel="stylesheet" />
+<style>
+  *{box-sizing:border-box}
+  body{margin:0;background:#F6F4F0;font-family:'Prompt',system-ui,sans-serif;color:#1B1A18;-webkit-font-smoothing:antialiased}
+  a{color:#4B4459;text-decoration:none}
+  a:hover{color:#1B1A18}
+  input,select,button{font-family:'Prompt',system-ui,sans-serif}
+  input:focus,select:focus{outline:1.5px solid #4B4459;outline-offset:0}
+  ::-webkit-scrollbar{height:8px;width:8px}
+  ::-webkit-scrollbar-thumb{background:#D8D3CA;border-radius:8px}
+  /* iOS จะซูมหน้าจอเข้าเองทุกครั้งที่กดช่องกรอกที่ตัวอักษรเล็กกว่า 16px — บังคับ 16px เฉพาะจอมือถือ/แท็บเล็ต */
+  @media (max-width:1024px){
+    input,select,textarea{font-size:16px !important}
+  }
+  body{padding-left:env(safe-area-inset-left);padding-right:env(safe-area-inset-right)}
+</style>
+</helmet>
+
+<sc-if value="{{ locked }}" hint-placeholder-val="{{ true }}">
+  <div style="position:fixed;top:0;left:0;width:100%;height:100%;background:#F6F4F0;z-index:9999;display:flex;align-items:center;justify-content:center;padding:24px">
+    <div style="width:100%;max-width:320px;text-align:center">
+      <div style="display:flex;align-items:baseline;gap:9px;justify-content:center;margin-bottom:10px">
+        <span style="font-size:19px;font-weight:500;letter-spacing:0.16em">MOONLAB</span>
+        <span style="font-size:11px;font-weight:300;letter-spacing:0.22em;color:#8C867C;text-transform:uppercase">Stock</span>
+      </div>
+      <div style="font-size:12.5px;font-weight:300;color:#8C867C;margin-bottom:30px">ใส่รหัส 3 หลักเพื่อเข้าใช้งาน</div>
+
+      <div style="display:flex;gap:14px;justify-content:center;margin-bottom:14px">
+        <sc-for list="{{ pinDots }}" as="d" hint-placeholder-count="3">
+          <div style="{{ d.style }}"></div>
+        </sc-for>
+      </div>
+      <div style="font-size:11.5px;font-weight:400;color:#B4675C;min-height:18px;margin-bottom:20px">{{ pinErr }}</div>
+
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px">
+        <sc-for list="{{ pinKeys }}" as="k" hint-placeholder-count="9">
+          <button onClick="{{ k.press }}" style="border:1px solid #E0DBD2;background:#FFFDFA;color:#1B1A18;border-radius:14px;padding:16px 0;font-size:19px;font-weight:400;cursor:pointer" style-hover="background:#F1EEE7">{{ k.label }}</button>
+        </sc-for>
+        <button onClick="{{ pinClear }}" style="border:1px solid #E8E4DB;background:transparent;color:#A19A8E;border-radius:14px;padding:16px 0;font-size:12px;font-weight:300;cursor:pointer" style-hover="color:#B4675C">ล้าง</button>
+        <button onClick="{{ pinZero }}" style="border:1px solid #E0DBD2;background:#FFFDFA;color:#1B1A18;border-radius:14px;padding:16px 0;font-size:19px;font-weight:400;cursor:pointer" style-hover="background:#F1EEE7">0</button>
+      </div>
+    </div>
+  </div>
+</sc-if>
+
+<div style="min-height:100vh;background:#F6F4F0;padding:0 clamp(12px,3.5vw,22px) 90px">
+  <div style="max-width:1180px;margin:0 auto">
+
+    <div style="display:flex;flex-wrap:wrap;align-items:baseline;gap:12px 20px;padding:clamp(20px,4vw,32px) 0 20px">
+      <div style="display:flex;align-items:baseline;gap:10px">
+        <span style="font-size:20px;font-weight:500;letter-spacing:0.16em">MOONLAB</span>
+        <span style="font-size:12px;font-weight:300;letter-spacing:0.22em;color:#8C867C;text-transform:uppercase">Stock &amp; Profit</span>
+      </div>
+      <div style="flex:1"></div>
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+        <button onClick="{{ syncTap }}" title="{{ syncTitle }}" style="{{ syncStyle }}">{{ syncLabel }}</button>
+        <div style="font-size:12.5px;font-weight:300;color:#8C867C">{{ headNote }}</div>
+      </div>
+    </div>
+
+    <div style="display:flex;gap:6px;overflow-x:auto;padding-bottom:2px;border-bottom:1px solid #E4E0D8;margin-bottom:26px">
+      <sc-for list="{{ nav }}" as="n" hint-placeholder-count="7">
+        <button onClick="{{ n.go }}" style="{{ n.style }}">{{ n.label }}</button>
+      </sc-for>
+    </div>
+
+    <sc-if value="{{ isDash }}" hint-placeholder-val="{{ true }}">
+      <div>
+        <div style="display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:16px;margin-bottom:16px">
+          <div>
+            <div style="font-size:11px;font-weight:400;letter-spacing:0.2em;color:#A19A8E;text-transform:uppercase;margin-bottom:7px">สรุปรายวัน</div>
+            <div style="font-size:clamp(21px,4.4vw,26px);font-weight:400;letter-spacing:-0.01em">{{ dayLabel }}</div>
+          </div>
+          <input type="date" value="{{ date }}" onChange="{{ onDate }}" style="border:1px solid #E0DBD2;background:#FFFDFA;border-radius:10px;padding:12px 13px;font-size:14px;color:#1B1A18" />
+        </div>
+
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px;margin-bottom:34px">
+          <sc-for list="{{ dayKpis }}" as="k" hint-placeholder-count="4">
+            <div style="background:#FFFDFA;border:1px solid #EBE7DF;border-radius:16px;padding:20px 20px 18px">
+              <div style="font-size:11.5px;font-weight:400;color:#9A9388;letter-spacing:0.04em;margin-bottom:12px">{{ k.label }}</div>
+              <div style="display:flex;align-items:baseline;gap:5px">
+                <span style="font-size:30px;font-weight:500;letter-spacing:-0.02em;line-height:1">{{ k.value }}</span>
+                <span style="font-size:12.5px;font-weight:300;color:#9A9388">{{ k.unit }}</span>
+              </div>
+              <div style="font-size:11.5px;font-weight:300;color:#A19A8E;margin-top:9px">{{ k.sub }}</div>
+            </div>
+          </sc-for>
+        </div>
+
+        <div style="display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:16px;margin-bottom:16px">
+          <div>
+            <div style="font-size:11px;font-weight:400;letter-spacing:0.2em;color:#A19A8E;text-transform:uppercase;margin-bottom:7px">สรุปผู้บริหาร</div>
+            <div style="font-size:clamp(21px,4.4vw,26px);font-weight:400;letter-spacing:-0.01em">{{ rangeLabel }}</div>
+          </div>
+          <div style="display:flex;gap:6px">
+            <sc-for list="{{ ranges }}" as="r" hint-placeholder-count="3">
+              <button onClick="{{ r.go }}" style="{{ r.style }}">{{ r.label }}</button>
+            </sc-for>
+          </div>
+        </div>
+
+        <div style="background:#FFFDFA;border:1px solid #EBE7DF;border-radius:16px;padding:24px;margin-bottom:12px">
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:22px 18px">
+            <sc-for list="{{ execKpis }}" as="k" hint-placeholder-count="6">
+              <div>
+                <div style="font-size:11.5px;font-weight:400;color:#9A9388;margin-bottom:8px">{{ k.label }}</div>
+                <div style="font-size:23px;font-weight:500;letter-spacing:-0.02em;color:{{ k.color }}">{{ k.value }}</div>
+                <div style="font-size:11.5px;font-weight:300;color:#A19A8E;margin-top:5px">{{ k.sub }}</div>
+              </div>
+            </sc-for>
+          </div>
+          <div style="height:1px;background:#EFEBE3;margin:24px 0 20px"></div>
+          <div style="font-size:13.5px;font-weight:500;margin-bottom:14px">{{ chartTitle }}</div>
+          <div style="background:#FDFCF9;border:1px solid #EBE7DF;border-radius:14px;padding:22px 24px 16px;margin-top:8px;display:grid;grid-template-columns:18px 62px 1fr;gap:0 8px">
+            <div style="grid-row:1;display:flex;align-items:center;justify-content:center">
+              <span style="font-size:11px;font-weight:500;color:#6E6860;writing-mode:vertical-rl;transform:rotate(180deg);white-space:nowrap">ยอดขาย (฿)</span>
+            </div>
+            <div style="grid-row:1;display:flex;flex-direction:column;justify-content:space-between;height:250px;align-items:flex-end">
+              <sc-for list="{{ yTicks }}" as="t" hint-placeholder-count="6">
+                <span style="font-size:11px;font-weight:300;color:#9A9388;line-height:1;transform:translateY(-50%)">{{ t.label }}</span>
+              </sc-for>
+            </div>
+            <div style="grid-row:1;position:relative;height:250px;border-left:1.5px solid #C9C3B8;border-bottom:1.5px solid #C9C3B8">
+              <div style="position:absolute;inset:0;display:flex;flex-direction:column;justify-content:space-between">
+                <sc-for list="{{ yTicks }}" as="t" hint-placeholder-count="6">
+                  <div style="border-top:1px solid #F0ECE4;height:0"></div>
+                </sc-for>
+              </div>
+              <svg style="position:absolute;inset:0;width:100%;height:100%;overflow:visible" viewBox="0 0 100 100" preserveAspectRatio="none">
+                <polyline points="{{ chartPoints }}" fill="none" stroke="#3F6480" stroke-width="0.6" vector-effect="non-scaling-stroke" style="stroke-width:2.5px" />
+              </svg>
+              <sc-for list="{{ chartDots }}" as="dot" hint-placeholder-count="7">
+                <div style="{{ dot.style }}"></div>
+              </sc-for>
+              <sc-for list="{{ chartPeaks }}" as="p" hint-placeholder-count="3">
+                <div style="{{ p.style }}">{{ p.label }}</div>
+              </sc-for>
+            </div>
+            <div style="grid-row:2;grid-column:3;position:relative;height:16px;margin-top:8px">
+              <sc-for list="{{ chartLabels }}" as="lbl" hint-placeholder-count="7">
+                <span style="{{ lbl.style }}">{{ lbl.text }}</span>
+              </sc-for>
+            </div>
+            <div style="grid-row:3;grid-column:3;text-align:center;font-size:11px;font-weight:500;color:#6E6860;padding-top:8px">{{ chartAxisLabel }}</div>
+          </div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:12px">
+          <div style="background:#FFFDFA;border:1px solid #EBE7DF;border-radius:16px;padding:clamp(16px,3vw,22px) clamp(16px,3.2vw,24px)">
+            <div style="font-size:13.5px;font-weight:500;margin-bottom:4px">ขายดีที่สุด</div>
+            <div style="font-size:11.5px;font-weight:300;color:#A19A8E;margin-bottom:16px">{{ rangeLabel }} · เรียงตามจำนวนชิ้น</div>
+            <sc-for list="{{ topSellers }}" as="t" hint-placeholder-count="6">
+              <div style="display:flex;align-items:center;gap:12px;padding:9px 0;border-top:1px solid #F2EFE8">
+                <span style="font-size:11px;font-weight:400;color:#B0A99D;width:16px">{{ t.rank }}</span>
+                <div style="flex:1;min-width:0">
+                  <div style="font-size:13px;font-weight:400;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ t.name }}</div>
+                  <div style="font-size:11px;font-weight:300;color:#A19A8E">{{ t.meta }}</div>
+                </div>
+                <div style="text-align:right">
+                  <div style="font-size:13.5px;font-weight:500">{{ t.units }}</div>
+                  <div style="font-size:11px;font-weight:300;color:#7C9070">{{ t.profit }}</div>
+                </div>
+              </div>
+            </sc-for>
+          </div>
+
+          <div style="background:#FFFDFA;border:1px solid #EBE7DF;border-radius:16px;padding:clamp(16px,3vw,22px) clamp(16px,3.2vw,24px)">
+            <div style="font-size:13.5px;font-weight:500;margin-bottom:4px">ต้องดูด่วน</div>
+            <div style="font-size:11.5px;font-weight:300;color:#A19A8E;margin-bottom:16px">สต็อกใกล้หมด · เกณฑ์ {{ threshold }} ชิ้น</div>
+            <sc-for list="{{ alerts }}" as="a" hint-placeholder-count="6">
+              <div style="display:flex;align-items:center;gap:12px;padding:9px 0;border-top:1px solid #F2EFE8">
+                <span style="width:6px;height:6px;border-radius:50%;background:{{ a.dot }};flex:none"></span>
+                <div style="flex:1;min-width:0">
+                  <div style="font-size:13px;font-weight:400;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ a.name }}</div>
+                  <div style="font-size:11px;font-weight:300;color:#A19A8E">{{ a.meta }}</div>
+                </div>
+                <div style="font-size:13.5px;font-weight:500;color:{{ a.dot }}">{{ a.qty }}</div>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ isEntry }}">
+      <div>
+        <div style="font-size:11px;font-weight:400;letter-spacing:0.2em;color:#A19A8E;text-transform:uppercase;margin-bottom:7px">บันทึกยอดขาย</div>
+        <div style="font-size:clamp(21px,4.4vw,26px);font-weight:400;letter-spacing:-0.01em;margin-bottom:10px">ลงบันทึกขายรายวัน</div>
+        <div style="font-size:12.5px;font-weight:300;color:#8C867C;margin-bottom:24px;max-width:820px;text-wrap:pretty">ทุกครั้งที่บันทึก ระบบตัดสต็อกสินค้าและอุปกรณ์แพคเกจตามหมวดสินค้าให้อัตโนมัติ</div>
+
+        <sc-if value="{{ okBanner }}">
+          <div style="display:flex;align-items:center;gap:12px;background:#EDF3E9;border:1px solid #C9D9C0;border-radius:14px;padding:14px 18px;margin-bottom:12px">
+            <span style="width:20px;height:20px;border-radius:50%;background:#6F8763;color:#FFFDFA;font-size:12px;line-height:20px;text-align:center;flex:none">✓</span>
+            <div style="flex:1;font-size:13px;font-weight:500;color:#3F5137">{{ okBanner }}</div>
+            <button onClick="{{ dismissOk }}" style="border:none;background:transparent;color:#7D8F73;width:24px;height:24px;font-size:15px;line-height:1;cursor:pointer;flex:none" style-hover="color:#3F5137">×</button>
+          </div>
+        </sc-if>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+          <div style="background:#FFFDFA;border:1px solid #EBE7DF;border-radius:16px;padding:clamp(16px,3vw,20px) clamp(16px,3.2vw,24px)">
+            <div style="display:flex;flex-wrap:wrap;align-items:center;gap:14px">
+              <div style="flex:1;min-width:180px">
+                <div style="font-size:13.5px;font-weight:500;margin-bottom:4px">PDF ใบปะหน้า TikTok</div>
+                <div style="font-size:11.5px;font-weight:300;color:#A19A8E;text-wrap:pretty">อ่านชื่อสินค้า จำนวน วันที่ส่ง จับคู่อัตโนมัติ</div>
+              </div>
+              <label style="border:1px dashed #D8D3CA;background:#FBF9F5;border-radius:11px;padding:11px 16px;font-size:12px;font-weight:500;cursor:pointer;color:#3B3833;flex:none" style-hover="background:#F1EEE7">
+                📄 PDF
+                <input type="file" accept="application/pdf" onChange="{{ onPdf }}" style="display:none" />
+              </label>
+            </div>
+            <div style="font-size:11.5px;font-weight:300;color:#8C867C;margin-top:10px;min-height:15px">{{ importNote }}</div>
+          </div>
+
+          <div style="background:#FFFDFA;border:1px solid #EBE7DF;border-radius:16px;padding:clamp(16px,3vw,20px) clamp(16px,3.2vw,24px)">
+            <div style="display:flex;flex-wrap:wrap;align-items:center;gap:14px">
+              <div style="flex:1;min-width:180px">
+                <div style="font-size:13.5px;font-weight:500;margin-bottom:4px">Excel ข้อมูล TikTok</div>
+                <div style="font-size:11.5px;font-weight:300;color:#A19A8E;text-wrap:pretty">อัพโหลดรายงานยอดขาย ออกแบบในตัวอัตโนมัติ</div>
+              </div>
+              <label style="border:1px dashed #25F4EE;background:#F0FFFE;border-radius:11px;padding:11px 16px;font-size:12px;font-weight:500;cursor:pointer;color:#0A5A56;flex:none" style-hover="background:#D4F9F7">
+                📊 Excel
+                <input type="file" accept=".xlsx,.xls" onChange="{{ onTiktokExcel }}" style="display:none" />
+              </label>
+            </div>
+            <div style="font-size:11.5px;font-weight:300;color:#8C867C;margin-top:10px;min-height:15px">{{ excelNote }}</div>
+          </div>
+        </div>
+
+        <sc-if value="{{ hasImport }}">
+          <div style="background:#FFFDFA;border:1px solid #DCD7CE;border-radius:16px;padding:clamp(16px,3vw,22px) clamp(16px,3.2vw,24px);margin-bottom:12px">
+            <div style="display:flex;flex-wrap:wrap;align-items:baseline;gap:12px;margin-bottom:6px">
+              <div style="font-size:13.5px;font-weight:500">ตรวจก่อนบันทึก</div>
+              <div style="flex:1;font-size:11.5px;font-weight:300;color:#A19A8E">{{ importSummary }}</div>
+            </div>
+            <div style="font-size:11.5px;font-weight:300;color:#A19A8E;margin-bottom:14px">แถวที่ขึ้นเตือนสีส้มคือจับคู่ไม่มั่นใจ เลือกสินค้าที่ถูกต้องจากดรอปดาวน์ก่อนกดบันทึก</div>
+            <div style="overflow-x:auto">
+              <div style="min-width:640px">
+                <div style="display:grid;grid-template-columns:minmax(180px,1fr) 84px 68px 78px 84px 28px;gap:10px;padding:10px 0;border-bottom:1px solid #EFEBE3;font-size:11px;font-weight:400;color:#9A9388;letter-spacing:0.06em">
+                  <span>จับคู่กับสินค้า</span><span>วันที่ส่ง</span><span style="text-align:right">จำนวน</span><span style="text-align:right">ราคา/ชิ้น</span><span style="text-align:right">กำไรสุทธิ</span><span></span>
+                </div>
+                <sc-for list="{{ importRows }}" as="r" hint-placeholder-count="4">
+                  <div style="display:grid;grid-template-columns:minmax(180px,1fr) 84px 68px 78px 84px 28px;gap:10px;align-items:center;padding:10px 0;border-bottom:1px solid #F5F2EC">
+                    <div style="min-width:0">
+                      <select value="{{ r.sku }}" onChange="{{ r.onPick }}" style="width:100%;border:1px solid {{ r.border }};background:#FDFCF9;border-radius:8px;padding:7px 8px;font-size:12px;color:#1B1A18">
+                        <sc-for list="{{ r.options }}" as="o" hint-placeholder-count="3">
+                          <option value="{{ o.id }}">{{ o.label }}</option>
+                        </sc-for>
+                      </select>
+                      <div style="font-size:10.5px;font-weight:300;color:#A19A8E;margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ r.raw }}</div>
+                    </div>
+                    <div style="font-size:12px;font-weight:300;color:#6E6860">{{ r.date }}</div>
+                    <div style="display:flex;justify-content:flex-end">
+                      <input value="{{ r.qty }}" onChange="{{ r.onQty }}" inputmode="numeric" style="width:52px;border:1px solid #E8E3DA;background:#FDFCF9;border-radius:8px;padding:6px 8px;font-size:12px;text-align:right" />
+                    </div>
+                    <div style="display:flex;justify-content:flex-end">
+                      <input value="{{ r.price }}" onChange="{{ r.onPrice }}" inputmode="numeric" style="width:64px;border:1px solid #E8E3DA;background:#FDFCF9;border-radius:8px;padding:6px 8px;font-size:12px;text-align:right" />
+                    </div>
+                    <span style="font-size:12.5px;font-weight:500;text-align:right;color:{{ r.netColor }}">{{ r.net }}</span>
+                    <button onClick="{{ r.del }}" style="border:none;background:transparent;color:#C4BEB4;width:34px;height:34px;font-size:15px;line-height:1;cursor:pointer;border-radius:9px" style-hover="color:#B4675C">×</button>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+            <div style="display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin-top:16px">
+              <button onClick="{{ confirmImport }}" style="border:none;background:#1B1A18;color:#F6F4F0;border-radius:11px;padding:12px 22px;font-size:13px;font-weight:500;cursor:pointer" style-hover="background:#332F2A">{{ importCta }}</button>
+              <button onClick="{{ cancelImport }}" style="border:1px solid #DCD7CE;background:transparent;color:#6E6860;border-radius:11px;padding:12px 20px;font-size:13px;font-weight:300;cursor:pointer" style-hover="background:#F1EEE7">ยกเลิก</button>
+              <div style="flex:1;min-width:160px;font-size:11.5px;font-weight:300;color:#8C867C;text-align:right">{{ importTotal }}</div>
+            </div>
+          </div>
+        </sc-if>
+
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:12px;align-items:start">
+          <div style="background:#FFFDFA;border:1px solid #EBE7DF;border-radius:16px;padding:clamp(16px,3vw,22px) clamp(16px,3.2vw,24px)">
+            <div style="display:grid;gap:14px">
+              <div>
+                <div style="font-size:11.5px;font-weight:400;color:#9A9388;margin-bottom:7px">วันที่</div>
+                <input type="date" value="{{ date }}" onChange="{{ onDate }}" style="width:100%;border:1px solid #E0DBD2;background:#FDFCF9;border-radius:10px;padding:13px 13px;font-size:14px" />
+              </div>
+              <div>
+                <div style="font-size:11.5px;font-weight:400;color:#9A9388;margin-bottom:7px">ค้นหาสินค้า</div>
+                <input value="{{ q }}" onChange="{{ onQ }}" placeholder="พิมพ์ชื่อรุ่น เช่น มูนลูน่า" style="width:100%;border:1px solid #E0DBD2;background:#FDFCF9;border-radius:10px;padding:13px 13px;font-size:14px" />
+                <div style="max-height:190px;overflow:auto;margin-top:8px;border:1px solid #F0ECE4;border-radius:10px">
+                  <sc-for list="{{ pickList }}" as="p" hint-placeholder-count="5">
+                    <div onClick="{{ p.pick }}" style="{{ p.style }}">
+                      <div style="flex:1;min-width:0">
+                        <div style="font-size:12.5px;font-weight:400;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ p.name }}</div>
+                        <div style="font-size:10.5px;font-weight:300;color:#A19A8E">{{ p.meta }}</div>
+                      </div>
+                      <div style="font-size:12px;font-weight:400;color:#8C867C;flex:none">{{ p.stock }}</div>
+                    </div>
+                  </sc-for>
+                </div>
+              </div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+                <div>
+                  <div style="font-size:11.5px;font-weight:400;color:#9A9388;margin-bottom:7px">ส่วนลด/โปรฯ (รวม)</div>
+                  <input value="{{ disc }}" onChange="{{ onDisc }}" inputmode="numeric" placeholder="0" style="width:100%;border:1px solid #E0DBD2;background:#FDFCF9;border-radius:10px;padding:13px 13px;font-size:14px" />
+                </div>
+                <div>
+                  <div style="font-size:11.5px;font-weight:400;color:#9A9388;margin-bottom:7px">ค่าส่งที่เราจ่าย</div>
+                  <input value="{{ ship }}" onChange="{{ onShip }}" inputmode="numeric" placeholder="0" style="width:100%;border:1px solid #E0DBD2;background:#FDFCF9;border-radius:10px;padding:13px 13px;font-size:14px" />
+                </div>
+              </div>
+              <div>
+                <div style="font-size:11.5px;font-weight:400;color:#9A9388;margin-bottom:7px">ช่องทางขาย</div>
+                <div style="display:flex;gap:6px;flex-wrap:wrap">
+                  <sc-for list="{{ channels }}" as="c" hint-placeholder-count="3">
+                    <button onClick="{{ c.go }}" style="{{ c.style }}">{{ c.label }}</button>
+                  </sc-for>
+                </div>
+              </div>
+              <div style="font-size:11.5px;font-weight:300;color:#A19A8E;text-align:center;min-height:16px">{{ toast }}</div>
+            </div>
+          </div>
+
+          <div style="display:grid;gap:12px">
+            <div style="background:#F7F6F0;border:1px solid #DCD7CE;border-radius:16px;padding:clamp(16px,3vw,22px) clamp(16px,3.2vw,24px)">
+              <div style="display:flex;align-items:baseline;gap:10px;margin-bottom:4px">
+                <div style="font-size:13.5px;font-weight:500">ตะกร้าที่กำลังบันทึก</div>
+                <div style="flex:1"></div>
+                <div style="font-size:12px;font-weight:400;color:#8C867C">{{ cartCount }}</div>
+              </div>
+              <div style="font-size:11.5px;font-weight:300;color:#A19A8E;margin-bottom:14px">กดสินค้าจากรายการทางซ้ายเพื่อใส่ตะกร้า ปรับจำนวนด้วย + −</div>
+              <sc-if value="{{ cartEmpty }}">
+                <div style="border:1px dashed #E4E0D8;border-radius:12px;padding:22px;text-align:center;font-size:12px;font-weight:300;color:#A19A8E">ตะกร้ายังว่าง</div>
+              </sc-if>
+              <sc-for list="{{ cartRows }}" as="c" hint-placeholder-count="0">
+                <div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-top:1px solid #F2EFE8">
+                  <div style="flex:1;min-width:0">
+                    <div style="font-size:12.5px;font-weight:400;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ c.name }}</div>
+                    <div style="font-size:10.5px;font-weight:300;color:#A19A8E">{{ c.meta }}</div>
+                  </div>
+                  <div style="display:flex;align-items:center;gap:5px;flex:none">
+                    <button onClick="{{ c.minus }}" style="border:1px solid #E4E0D8;background:#FBF9F5;color:#6E6860;border-radius:50%;width:24px;height:24px;font-size:13px;line-height:1;cursor:pointer" style-hover="background:#F1EEE7">−</button>
+                    <span style="font-size:13px;font-weight:500;min-width:16px;text-align:center">{{ c.qty }}</span>
+                    <button onClick="{{ c.plus }}" style="border:1px solid #E4E0D8;background:#FBF9F5;color:#6E6860;border-radius:50%;width:24px;height:24px;font-size:13px;line-height:1;cursor:pointer" style-hover="background:#F1EEE7">+</button>
+                  </div>
+                  <input value="{{ c.price }}" onChange="{{ c.onPrice }}" inputmode="numeric" style="width:62px;border:1px solid #E8E3DA;background:#FDFCF9;border-radius:8px;padding:6px 8px;font-size:12px;text-align:right;flex:none" />
+                  <div style="text-align:right;flex:none;min-width:62px">
+                    <div style="font-size:12.5px;font-weight:400">{{ c.line }}</div>
+                    <div style="font-size:10.5px;font-weight:300;color:#7C9070">{{ c.net }}</div>
+                  </div>
+                  <button onClick="{{ c.del }}" style="border:none;background:transparent;color:#C4BEB4;width:34px;height:34px;font-size:15px;line-height:1;cursor:pointer;border-radius:9px;flex:none" style-hover="color:#B4675C">×</button>
+                </div>
+              </sc-for>
+              <sc-if value="{{ cartHas }}">
+                <div>
+                  <sc-for list="{{ cartSummary }}" as="s" hint-placeholder-count="0">
+                    <div style="display:flex;justify-content:space-between;gap:12px;padding:6px 0;border-top:1px solid #F2EFE8">
+                      <span style="font-size:12.5px;font-weight:300;color:#6E6860">{{ s.label }}</span>
+                      <span style="font-size:12.5px;font-weight:400;color:{{ s.color }}">{{ s.value }}</span>
+                    </div>
+                  </sc-for>
+                  <div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px;padding-top:14px;margin-top:8px;border-top:1px solid #E4E0D8">
+                    <span style="font-size:13px;font-weight:500">กำไรสุทธิรวม</span>
+                    <span style="font-size:24px;font-weight:500;color:{{ cartNetColor }}">{{ cartNet }}</span>
+                  </div>
+                  <button onClick="{{ saveCart }}" style="width:100%;border:none;background:#1B1A18;color:#F6F4F0;border-radius:11px;padding:13px;font-size:13.5px;font-weight:500;cursor:pointer;margin-top:16px" style-hover="background:#332F2A">{{ cartCta }}</button>
+                  <button onClick="{{ clearCart }}" style="width:100%;border:none;background:transparent;color:#A19A8E;border-radius:11px;padding:9px;font-size:12px;font-weight:300;cursor:pointer;margin-top:4px" style-hover="color:#B4675C">ล้างตะกร้า</button>
+                </div>
+              </sc-if>
+            </div>
+
+
+
+            <div style="background:#FFFDFA;border:1px solid #EBE7DF;border-radius:16px;padding:clamp(16px,3vw,22px) clamp(16px,3.2vw,24px)">
+              <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px">
+                <div style="font-size:13.5px;font-weight:500">รายการของ {{ dayLabel }}</div>
+                <div style="font-size:12px;font-weight:400;color:#8C867C">{{ dayCount }}</div>
+              </div>
+              <div style="font-size:11.5px;font-weight:300;color:#A19A8E;margin-bottom:12px">ค่าโฆษณาวันนี้ กรอกครั้งเดียวต่อวัน</div>
+              <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
+                <span style="font-size:12.5px;font-weight:300;color:#6E6860">ค่าโฆษณา</span>
+                <input value="{{ adToday }}" onChange="{{ onAd }}" inputmode="numeric" placeholder="0" style="flex:1;border:1px solid #E0DBD2;background:#FDFCF9;border-radius:10px;padding:12px 13px;font-size:14px" />
+                <span style="font-size:12px;font-weight:300;color:#A19A8E">บาท</span>
+              </div>
+              <div style="max-height:280px;overflow:auto">
+                <sc-for list="{{ dayRows }}" as="d" hint-placeholder-count="3">
+                  <div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-top:1px solid #F2EFE8">
+                    <div style="flex:1;min-width:0">
+                      <div style="font-size:12.5px;font-weight:400;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ d.name }}</div>
+                      <div style="font-size:10.5px;font-weight:300;color:#A19A8E">{{ d.meta }}</div>
+                    </div>
+                    <div style="text-align:right;flex:none">
+                      <div style="font-size:12.5px;font-weight:400">{{ d.revenue }}</div>
+                      <div style="font-size:10.5px;font-weight:300;color:#7C9070">{{ d.net }}</div>
+                    </div>
+                    <button onClick="{{ d.del }}" style="border:1px solid #E8E3DA;background:#FDFCF9;color:#A19A8E;border-radius:8px;width:26px;height:26px;font-size:14px;line-height:1;cursor:pointer;flex:none" style-hover="color:#B4675C;border-color:#E3CFC9">×</button>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ isStock }}">
+      <div>
+        <div style="font-size:11px;font-weight:400;letter-spacing:0.2em;color:#A19A8E;text-transform:uppercase;margin-bottom:7px">คลังสินค้า</div>
+        <div style="font-size:26px;font-weight:400;margin-bottom:18px">สต็อกสินค้า</div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-bottom:20px">
+          <sc-for list="{{ stockKpis }}" as="k" hint-placeholder-count="4">
+            <div style="background:#FFFDFA;border:1px solid #EBE7DF;border-radius:16px;padding:clamp(15px,2.8vw,18px) clamp(15px,3vw,20px)">
+              <div style="font-size:11.5px;font-weight:400;color:#9A9388;margin-bottom:9px">{{ k.label }}</div>
+              <div style="font-size:24px;font-weight:500;letter-spacing:-0.02em;color:{{ k.color }}">{{ k.value }}</div>
+            </div>
+          </sc-for>
+        </div>
+        <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px">
+          <input value="{{ pq }}" onChange="{{ onPq }}" placeholder="ค้นหาสินค้า" style="flex:1;min-width:200px;border:1px solid #E0DBD2;background:#FFFDFA;border-radius:10px;padding:10px 13px;font-size:13.5px" />
+          <sc-for list="{{ catFilters }}" as="c" hint-placeholder-count="4">
+            <button onClick="{{ c.go }}" style="{{ c.style }}">{{ c.label }}</button>
+          </sc-for>
+        </div>
+        <div style="background:#FFFDFA;border:1px solid #EBE7DF;border-radius:16px;overflow-x:auto">
+          <div style="display:grid;grid-template-columns:minmax(150px,1fr) 110px 90px 108px 60px;min-width:640px;gap:12px;padding:13px 22px;background:#FBF9F5;border-bottom:1px solid #EFEBE3;font-size:11px;font-weight:400;color:#9A9388;letter-spacing:0.06em">
+            <span>สินค้า</span><span>หมวด</span><span style="text-align:right">ขาย 30 วัน</span><span style="text-align:right">คงเหลือ</span><span></span>
+          </div>
+          <sc-for list="{{ stockRows }}" as="s" hint-placeholder-count="10">
+            <div style="display:grid;grid-template-columns:minmax(150px,1fr) 110px 90px 108px 60px;min-width:640px;gap:12px;align-items:center;padding:11px 22px;border-bottom:1px solid #F5F2EC">
+              <div style="min-width:0">
+                <div style="font-size:13px;font-weight:400;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ s.name }}</div>
+                <div style="font-size:10.5px;font-weight:300;color:#A19A8E">{{ s.variant }}</div>
+              </div>
+              <span style="font-size:11.5px;font-weight:300;color:#8C867C;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ s.cat }}</span>
+              <span style="font-size:12.5px;font-weight:300;color:#6E6860;text-align:right">{{ s.sold }}</span>
+              <div style="display:flex;justify-content:flex-end;align-items:center;gap:7px">
+                <span style="width:6px;height:6px;border-radius:50%;background:{{ s.dot }};flex:none"></span>
+                <input value="{{ s.stock }}" onChange="{{ s.onStock }}" inputmode="numeric" style="width:62px;border:1px solid #E8E3DA;background:#FDFCF9;border-radius:8px;padding:6px 8px;font-size:12.5px;text-align:right" />
+              </div>
+              <div style="display:flex;gap:5px;flex:none">
+                <button onClick="{{ s.editName }}" title="แก้ไขชื่อ" style="border:1px solid #E4E0D8;background:#FBF9F5;color:#6E6860;border-radius:8px;width:36px;height:36px;font-size:14px;line-height:1;cursor:pointer;padding:0" style-hover="background:#F1EEE7">✎</button>
+                <button onClick="{{ s.editCat }}" title="แก้ไขหมวด" style="border:1px solid #E4E0D8;background:#FBF9F5;color:#6E6860;border-radius:8px;width:36px;height:36px;font-size:14px;line-height:1;cursor:pointer;padding:0" style-hover="background:#F1EEE7">📋</button>
+              </div>
+            </div>
+          </sc-for>
+          <div style="padding:13px 22px;font-size:11.5px;font-weight:300;color:#A19A8E;min-width:640px">{{ stockFootnote }}</div>
+        </div>
+
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ showEditModal }}">
+      <div style="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.3);display:flex;align-items:center;justify-content:center;z-index:999">
+        <div style="background:#FFFDFA;border-radius:16px;padding:28px;max-width:420px;width:90%">
+          <div style="font-size:15px;font-weight:500;margin-bottom:18px">{{ editModalTitle }}</div>
+          <input value="{{ editingValue }}" onChange="{{ onEditingValue }}" style="width:100%;border:1px solid #E0DBD2;background:#FDFCF9;border-radius:10px;padding:11px 13px;font-size:13.5px;margin-bottom:18px" />
+          <sc-if value="{{ isEditCat }}">
+            <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:18px;max-height:140px;overflow-y:auto">
+              <sc-for list="{{ catOptions }}" as="c" hint-placeholder-count="7">
+                <button onClick="{{ c.pick }}" style="{{ c.style }}">{{ c.label }}</button>
+              </sc-for>
+            </div>
+          </sc-if>
+          <div style="display:flex;gap:10px">
+            <button onClick="{{ saveEdit }}" style="flex:1;border:none;background:#1B1A18;color:#F6F4F0;border-radius:10px;padding:11px;font-size:13px;font-weight:500;cursor:pointer" style-hover="background:#332F2A">บันทึก</button>
+            <button onClick="{{ cancelEdit }}" style="flex:1;border:1px solid #DCD7CE;background:transparent;color:#6E6860;border-radius:10px;padding:11px;font-size:13px;font-weight:300;cursor:pointer" style-hover="background:#F1EEE7">ยกเลิก</button>
+          </div>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ isPkg }}">
+      <div>
+        <div style="font-size:11px;font-weight:400;letter-spacing:0.2em;color:#A19A8E;text-transform:uppercase;margin-bottom:7px">แพคเกจ</div>
+        <div style="font-size:clamp(21px,4.4vw,26px);font-weight:400;letter-spacing:-0.01em;margin-bottom:10px">สต็อกอุปกรณ์แพคเกจ</div>
+        <div style="font-size:12.5px;font-weight:300;color:#8C867C;margin-bottom:24px;max-width:820px;text-wrap:pretty">ตัดออกอัตโนมัติทุกครั้งที่บันทึกขาย ตามสูตรแพคของแต่ละหมวดสินค้าด้านล่าง</div>
+
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(196px,1fr));gap:12px;margin-bottom:12px">
+          <sc-for list="{{ pkgRows }}" as="p" hint-placeholder-count="9">
+            <div style="background:#FFFDFA;border:1px solid #EBE7DF;border-radius:16px;overflow:hidden;display:flex;flex-direction:column">
+              <div style="position:relative;width:100%;aspect-ratio:1/1;background:#F4F1EB">
+                <image-slot id="{{ p.slotId }}" shape="rect" placeholder="{{ p.slotHint }}"></image-slot>
+                <div style="position:absolute;top:9px;left:9px;display:flex;align-items:center;gap:6px;background:rgba(255,253,250,0.92);border-radius:999px;padding:4px 10px 4px 8px;pointer-events:none">
+                  <span style="width:6px;height:6px;border-radius:50%;background:{{ p.dot }}"></span>
+                  <span style="font-size:10.5px;font-weight:500;color:#3B3833">{{ p.stockLabel }}</span>
+                </div>
+                <button onClick="{{ p.del }}" style="position:absolute;top:7px;right:7px;border:none;background:rgba(255,253,250,0.92);color:#A19A8E;border-radius:50%;width:34px;height:34px;font-size:15px;line-height:1;cursor:pointer;border-radius:9px" style-hover="color:#B4675C">×</button>
+              </div>
+              <div style="padding:13px 14px 14px;display:flex;flex-direction:column;gap:10px;flex:1">
+                <div>
+                  <div style="font-size:13px;font-weight:500;line-height:1.35">{{ p.name }}</div>
+                  <div style="font-size:10.5px;font-weight:300;color:#A19A8E;margin-top:3px">{{ p.note }}</div>
+                </div>
+                <div style="display:flex;align-items:baseline;gap:6px">
+                  <input value="{{ p.cost }}" onChange="{{ p.onCost }}" inputmode="decimal" style="width:58px;border:1px solid #E8E3DA;background:#FDFCF9;border-radius:8px;padding:5px 8px;font-size:12.5px;text-align:right" />
+                  <span style="font-size:11px;font-weight:300;color:#A19A8E">บาท/ชิ้น</span>
+                  <div style="flex:1"></div>
+                  <span style="font-size:11px;font-weight:300;color:#A19A8E">ใช้ {{ p.used }}</span>
+                </div>
+                <div style="display:flex;align-items:center;gap:5px;margin-top:auto">
+                  <button onClick="{{ p.minus }}" style="border:1px solid #E8E3DA;background:#FBF9F5;color:#6E6860;border-radius:9px;width:30px;height:30px;font-size:15px;line-height:1;cursor:pointer;flex:none" style-hover="background:#F1EEE7">−</button>
+                  <input value="{{ p.stock }}" onChange="{{ p.onStock }}" inputmode="numeric" style="flex:1;min-width:0;border:1px solid #E8E3DA;background:#FDFCF9;border-radius:9px;padding:7px 8px;font-size:13px;text-align:center" />
+                  <button onClick="{{ p.plus }}" style="border:1px solid #E8E3DA;background:#FBF9F5;color:#6E6860;border-radius:9px;width:30px;height:30px;font-size:15px;line-height:1;cursor:pointer;flex:none" style-hover="background:#F1EEE7">+</button>
+                </div>
+              </div>
+            </div>
+          </sc-for>
+          <div style="background:#FBF9F5;border:1px dashed #DCD7CE;border-radius:16px;padding:16px;display:flex;flex-direction:column;gap:8px;justify-content:center">
+            <div style="font-size:12.5px;font-weight:500;margin-bottom:2px">เพิ่มอุปกรณ์เสริม</div>
+            <input value="{{ newPkgName }}" onChange="{{ onNewPkgName }}" placeholder="ชื่ออุปกรณ์" style="border:1px solid #E0DBD2;background:#FFFDFA;border-radius:9px;padding:9px 11px;font-size:12.5px" />
+            <div style="display:flex;gap:8px">
+              <input value="{{ newPkgCost }}" onChange="{{ onNewPkgCost }}" inputmode="decimal" placeholder="ต้นทุน" style="flex:1;min-width:0;border:1px solid #E0DBD2;background:#FFFDFA;border-radius:9px;padding:9px 11px;font-size:12.5px;text-align:right" />
+              <input value="{{ newPkgStock }}" onChange="{{ onNewPkgStock }}" inputmode="numeric" placeholder="จำนวน" style="flex:1;min-width:0;border:1px solid #E0DBD2;background:#FFFDFA;border-radius:9px;padding:9px 11px;font-size:12.5px;text-align:right" />
+            </div>
+            <button onClick="{{ addPkg }}" style="border:none;background:#1B1A18;color:#F6F4F0;border-radius:9px;padding:10px;font-size:12.5px;font-weight:500;cursor:pointer" style-hover="background:#332F2A">เพิ่มอุปกรณ์</button>
+          </div>
+        </div>
+
+        <div style="background:#FFFDFA;border:1px solid #EBE7DF;border-radius:16px;padding:clamp(16px,3vw,22px) clamp(16px,3.2vw,24px)">
+          <div style="font-size:13.5px;font-weight:500;margin-bottom:4px">สูตรแพคต่อหมวดสินค้า</div>
+          <div style="font-size:11.5px;font-weight:300;color:#A19A8E;margin-bottom:16px">ขาย 1 ชิ้นในหมวดนี้ ระบบจะตัดอุปกรณ์ตามรายการนี้ · กด + − เพื่อแก้จำนวน หรือเลือกอุปกรณ์เพิ่มเข้าสูตร</div>
+          <sc-for list="{{ ruleRows }}" as="r" hint-placeholder-count="7">
+            <div style="padding:14px 0;border-top:1px solid #F2EFE8">
+              <div style="display:flex;flex-wrap:wrap;align-items:baseline;gap:10px;margin-bottom:10px">
+                <div style="font-size:12.5px;font-weight:500">{{ r.cat }}</div>
+                <div style="flex:1"></div>
+                <div style="font-size:12px;font-weight:400;color:#8C867C">{{ r.cost }}</div>
+              </div>
+              <div style="display:flex;flex-wrap:wrap;gap:7px;align-items:center">
+                <sc-for list="{{ r.items }}" as="it" hint-placeholder-count="5">
+                  <div style="display:flex;align-items:center;gap:6px;border:1px solid #E4E0D8;background:#FBF9F5;border-radius:999px;padding:4px 5px 4px 12px">
+                    <span style="font-size:12px;font-weight:400;color:#3B3833">{{ it.name }}</span>
+                    <button onClick="{{ it.minus }}" style="border:1px solid #E4E0D8;background:#FFFDFA;color:#6E6860;border-radius:50%;width:22px;height:22px;font-size:13px;line-height:1;cursor:pointer;flex:none" style-hover="background:#F1EEE7">−</button>
+                    <span style="font-size:12px;font-weight:500;min-width:12px;text-align:center">{{ it.n }}</span>
+                    <button onClick="{{ it.plus }}" style="border:1px solid #E4E0D8;background:#FFFDFA;color:#6E6860;border-radius:50%;width:22px;height:22px;font-size:13px;line-height:1;cursor:pointer;flex:none" style-hover="background:#F1EEE7">+</button>
+                    <button onClick="{{ it.del }}" style="border:none;background:transparent;color:#C4BEB4;width:20px;height:22px;font-size:14px;line-height:1;cursor:pointer;flex:none" style-hover="color:#B4675C">×</button>
+                  </div>
+                </sc-for>
+                <sc-if value="{{ r.hasSpare }}">
+                  <select value="" onChange="{{ r.add }}" style="border:1px dashed #D8D3CA;background:transparent;color:#8C867C;border-radius:999px;padding:6px 12px;font-size:12px;cursor:pointer">
+                    <option value="">+ เพิ่มอุปกรณ์</option>
+                    <sc-for list="{{ r.spare }}" as="s" hint-placeholder-count="2">
+                      <option value="{{ s }}">{{ s }}</option>
+                    </sc-for>
+                  </select>
+                </sc-if>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ isItems }}">
+      <div>
+        <div style="font-size:11px;font-weight:400;letter-spacing:0.2em;color:#A19A8E;text-transform:uppercase;margin-bottom:7px">รายการสินค้า</div>
+        <div style="font-size:clamp(21px,4.4vw,26px);font-weight:400;letter-spacing:-0.01em;margin-bottom:10px">ราคาและต้นทุน</div>
+        <div style="font-size:12.5px;font-weight:300;color:#8C867C;margin-bottom:20px">ต้นทุนตั้งต้นประเมินไว้ 35% ของราคาขาย แก้ให้ตรงกับต้นทุนนำเข้าจริงเพื่อให้กำไรสุทธิแม่นขึ้น</div>
+
+        <div style="background:#FFFDFA;border:1px solid #EBE7DF;border-radius:16px;padding:clamp(16px,3vw,20px) clamp(16px,3.2vw,24px);margin-bottom:14px;display:flex;flex-wrap:wrap;align-items:center;gap:14px">
+          <div style="font-size:13.5px;font-weight:500">นำเข้าข้อมูลค่าต้นทุน</div>
+          <label style="border:1px dashed #25F4EE;background:#F0FFFE;border-radius:11px;padding:11px 16px;font-size:12px;font-weight:500;cursor:pointer;color:#0A5A56;flex:none" style-hover="background:#D4F9F7">
+            📊 Excel
+            <input type="file" accept=".xlsx,.xls" onChange="{{ onItemsExcel }}" style="display:none" />
+          </label>
+          <div style="flex:1;min-width:180px;font-size:11.5px;font-weight:300;color:#8C867C">{{ itemsExcelNote }}</div>
+        </div>
+
+        <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px">
+          <input value="{{ pq }}" onChange="{{ onPq }}" placeholder="ค้นหาสินค้า" style="flex:1;min-width:200px;border:1px solid #E0DBD2;background:#FFFDFA;border-radius:10px;padding:10px 13px;font-size:13.5px" />
+          <sc-for list="{{ catFilters }}" as="c" hint-placeholder-count="4">
+            <button onClick="{{ c.go }}" style="{{ c.style }}">{{ c.label }}</button>
+          </sc-for>
+        </div>
+        <div style="background:#FFFDFA;border:1px solid #EBE7DF;border-radius:16px;overflow-x:auto">
+          <div style="display:grid;grid-template-columns:minmax(150px,1fr) 96px 96px 92px 96px 60px;min-width:680px;gap:10px;padding:14px clamp(14px,3vw,22px);background:#FBF9F5;border-bottom:1px solid #EFEBE3;font-size:11px;font-weight:400;color:#9A9388;letter-spacing:0.06em">
+            <span>สินค้า</span><span style="text-align:right">ราคาขาย</span><span style="text-align:right">ต้นทุน</span><span style="text-align:right">ค่าแพค</span><span style="text-align:right">กำไร/ชิ้น</span><span></span>
+          </div>
+          <sc-for list="{{ itemRows }}" as="i" hint-placeholder-count="10">
+            <div style="display:grid;grid-template-columns:minmax(150px,1fr) 96px 96px 92px 96px 60px;min-width:680px;gap:10px;align-items:center;padding:11px 22px;border-bottom:1px solid #F5F2EC">
+              <div style="min-width:0">
+                <div style="font-size:13px;font-weight:400;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ i.name }}</div>
+                <div style="font-size:10.5px;font-weight:300;color:#A19A8E">{{ i.meta }}</div>
+              </div>
+              <div style="display:flex;justify-content:flex-end">
+                <input value="{{ i.price }}" onChange="{{ i.onPrice }}" inputmode="numeric" style="width:70px;border:1px solid #E8E3DA;background:#FDFCF9;border-radius:8px;padding:6px 8px;font-size:12.5px;text-align:right" />
+              </div>
+              <div style="display:flex;justify-content:flex-end">
+                <input value="{{ i.cost }}" onChange="{{ i.onCost }}" inputmode="numeric" style="width:70px;border:1px solid #E8E3DA;background:#FDFCF9;border-radius:8px;padding:6px 8px;font-size:12.5px;text-align:right" />
+              </div>
+              <span style="font-size:12.5px;font-weight:300;color:#8C867C;text-align:right">{{ i.pkg }}</span>
+              <span style="font-size:13px;font-weight:500;text-align:right;color:{{ i.color }}">{{ i.margin }}</span>
+              <div style="display:flex;gap:5px;flex:none">
+                <button onClick="{{ i.editName }}" title="แก้ไขชื่อ" style="border:1px solid #E4E0D8;background:#FBF9F5;color:#6E6860;border-radius:8px;width:36px;height:36px;font-size:14px;line-height:1;cursor:pointer;padding:0" style-hover="background:#F1EEE7">✎</button>
+                <button onClick="{{ i.editCat }}" title="แก้ไขหมวด" style="border:1px solid #E4E0D8;background:#FBF9F5;color:#6E6860;border-radius:8px;width:36px;height:36px;font-size:14px;line-height:1;cursor:pointer;padding:0" style-hover="background:#F1EEE7">📋</button>
+              </div>
+            </div>
+          </sc-for>
+          <div style="padding:13px 22px;font-size:11.5px;font-weight:300;color:#A19A8E;min-width:680px">{{ itemFootnote }}</div>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ isPlan }}">
+      <div>
+        <div style="font-size:11px;font-weight:400;letter-spacing:0.2em;color:#A19A8E;text-transform:uppercase;margin-bottom:7px">วางแผนสั่งของ</div>
+        <div style="font-size:clamp(21px,4.4vw,26px);font-weight:400;letter-spacing:-0.01em;margin-bottom:10px">สั่งของจากจีน · ลีดไทม์ 15 วัน</div>
+        <div style="font-size:12.5px;font-weight:300;color:#8C867C;margin-bottom:24px;max-width:820px;text-wrap:pretty">คิดจากยอดขายเฉลี่ย 30 วันล่าสุด กันของไว้ให้ครอบคลุม 15 วันที่ของอยู่บนเรือ บวกสำรอง 7 วัน แล้วจัดลำดับตามกำไรต่อทุน 1 บาท เพื่อให้ทุนที่มีจำกัดหมุนได้เร็วที่สุด</div>
+
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px;margin-bottom:12px">
+          <sc-for list="{{ planKpis }}" as="k" hint-placeholder-count="4">
+            <div style="background:#FFFDFA;border:1px solid #EBE7DF;border-radius:16px;padding:clamp(15px,2.8vw,18px) clamp(15px,3vw,20px)">
+              <div style="font-size:11.5px;font-weight:400;color:#9A9388;margin-bottom:9px">{{ k.label }}</div>
+              <div style="font-size:23px;font-weight:500;letter-spacing:-0.02em;color:{{ k.color }}">{{ k.value }}</div>
+              <div style="font-size:11.5px;font-weight:300;color:#A19A8E;margin-top:5px">{{ k.sub }}</div>
+            </div>
+          </sc-for>
+        </div>
+
+        <div style="background:#FFFDFA;border:1px solid #EBE7DF;border-radius:16px;padding:clamp(16px,3vw,20px) clamp(16px,3.2vw,24px);margin-bottom:12px;display:flex;flex-wrap:wrap;align-items:center;gap:14px">
+          <div style="font-size:12.5px;font-weight:400;color:#6E6860">งบสั่งของรอบนี้</div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <input value="{{ budget }}" onChange="{{ onBudget }}" inputmode="numeric" style="width:120px;border:1px solid #E0DBD2;background:#FDFCF9;border-radius:10px;padding:12px 13px;font-size:14px;text-align:right" />
+            <span style="font-size:12px;font-weight:300;color:#A19A8E">บาท</span>
+          </div>
+          <div style="flex:1;min-width:180px;font-size:12px;font-weight:300;color:#8C867C">{{ budgetNote }}</div>
+        </div>
+
+        <div style="margin-bottom:12px;padding:0 4px">
+          <div style="display:flex;flex-wrap:wrap;gap:8px">
+            <sc-for list="{{ planShowCats }}" as="cat" hint-placeholder-count="3">
+              <button onClick="{{ cat.toggle }}" style="{{ cat.style }}">{{ cat.label }}</button>
+            </sc-for>
+          </div>
+        </div>
+
+        <div style="background:#FFFDFA;border:1px solid #EBE7DF;border-radius:16px;overflow-x:auto;margin-bottom:12px">
+          <div style="display:grid;grid-template-columns:minmax(150px,1fr) 80px 76px 86px 92px 100px;min-width:680px;gap:10px;padding:14px clamp(14px,3vw,22px);background:#FBF9F5;border-bottom:1px solid #EFEBE3;font-size:11px;font-weight:400;color:#9A9388;letter-spacing:0.06em">
+            <span>สินค้า</span><span style="text-align:right">ขาย/วัน</span><span style="text-align:right">คงเหลือ</span><span style="text-align:right">พอใช้อีก</span><span style="text-align:right">ควรสั่ง</span><span style="text-align:right">ใช้ทุน</span>
+          </div>
+          <sc-for list="{{ planRows }}" as="p" hint-placeholder-count="8">
+            <div style="display:grid;grid-template-columns:minmax(150px,1fr) 80px 76px 86px 92px 100px;min-width:680px;gap:10px;align-items:center;padding:11px 22px;border-bottom:1px solid #F5F2EC;background:{{ p.bg }}">
+              <div style="min-width:0">
+                <div style="font-size:13px;font-weight:400;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ p.name }}</div>
+                <div style="font-size:10.5px;font-weight:300;color:#A19A8E">{{ p.meta }}</div>
+              </div>
+              <span style="font-size:12.5px;font-weight:300;color:#6E6860;text-align:right">{{ p.rate }}</span>
+              <span style="font-size:12.5px;font-weight:300;color:#6E6860;text-align:right">{{ p.stock }}</span>
+              <span style="font-size:12.5px;font-weight:400;color:{{ p.coverColor }};text-align:right">{{ p.cover }}</span>
+              <span style="font-size:13.5px;font-weight:500;text-align:right">{{ p.order }}</span>
+              <span style="font-size:12.5px;font-weight:300;color:#6E6860;text-align:right">{{ p.capital }}</span>
+            </div>
+          </sc-for>
+        </div>
+
+        <div style="background:#FFFDFA;border:1px solid #DCD7CE;border-radius:16px;padding:clamp(16px,3vw,22px) clamp(16px,3.2vw,24px);margin-bottom:12px">
+          <div style="display:flex;flex-wrap:wrap;align-items:baseline;gap:12px;margin-bottom:4px">
+            <div style="font-size:13.5px;font-weight:500">ติดตามรอบสั่งของ</div>
+            <div style="flex:1;min-width:200px;font-size:11.5px;font-weight:300;color:#8C867C">{{ orderSummary }}</div>
+          </div>
+          <div style="font-size:11.5px;font-weight:300;color:#A19A8E;margin-bottom:16px">บันทึกวันสั่งและยอดเงิน ระบบคิดวันออกบิล (+5 วัน) และวันที่ของถึง (+15 วัน) ให้ กดที่สถานะเพื่อเลื่อนขั้น</div>
+
+          <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;padding-bottom:16px;border-bottom:1px solid #F2EFE8">
+            <div>
+              <div style="font-size:11.5px;font-weight:400;color:#9A9388;margin-bottom:7px">วันที่สั่ง</div>
+              <input type="date" value="{{ newOrderDate }}" onChange="{{ onNewOrderDate }}" style="border:1px solid #E0DBD2;background:#FDFCF9;border-radius:10px;padding:12px 13px;font-size:14px" />
+            </div>
+            <div>
+              <div style="font-size:11.5px;font-weight:400;color:#9A9388;margin-bottom:7px">ยอดเงินที่สั่ง</div>
+              <input value="{{ newOrderAmount }}" onChange="{{ onNewOrderAmount }}" inputmode="numeric" placeholder="0" style="width:120px;border:1px solid #E0DBD2;background:#FDFCF9;border-radius:10px;padding:12px 13px;font-size:14px;text-align:right" />
+            </div>
+            <div style="flex:1;min-width:160px">
+              <div style="font-size:11.5px;font-weight:400;color:#9A9388;margin-bottom:7px">รายละเอียด</div>
+              <input value="{{ newOrderNote }}" onChange="{{ onNewOrderNote }}" placeholder="เช่น สร้อยข้อมือ 8 รุ่น" style="width:100%;border:1px solid #E0DBD2;background:#FDFCF9;border-radius:10px;padding:12px 13px;font-size:14px" />
+            </div>
+            <button onClick="{{ addOrder }}" style="border:none;background:#1B1A18;color:#F6F4F0;border-radius:10px;padding:11px 20px;font-size:13px;font-weight:500;cursor:pointer;flex:none" style-hover="background:#332F2A">เพิ่มรอบสั่ง</button>
+          </div>
+
+          <sc-if value="{{ orderEmpty }}">
+            <div style="border:1px dashed #E4E0D8;border-radius:12px;padding:24px;text-align:center;font-size:12.5px;font-weight:300;color:#A19A8E;margin-top:16px">ยังไม่มีรอบสั่งของที่บันทึกไว้</div>
+          </sc-if>
+          <sc-for list="{{ orderRows }}" as="o" hint-placeholder-count="0">
+            <div style="display:flex;flex-wrap:wrap;align-items:center;gap:14px;padding:14px 0;border-bottom:1px solid #F5F2EC">
+              <div style="min-width:150px">
+                <div style="font-size:13px;font-weight:500">{{ o.date }} · {{ o.amount }}</div>
+                <div style="font-size:11px;font-weight:300;color:#A19A8E;margin-top:3px">{{ o.note }}</div>
+              </div>
+              <div style="flex:1;min-width:180px">
+                <div style="font-size:11.5px;font-weight:300;color:#6E6860">{{ o.bill }}</div>
+                <div style="font-size:11.5px;font-weight:300;color:#6E6860;margin-top:3px">{{ o.arrive }}</div>
+              </div>
+              <div style="font-size:12.5px;font-weight:500;color:{{ o.etaColor }};min-width:96px">{{ o.eta }}</div>
+              <button onClick="{{ o.cycle }}" style="{{ o.statusStyle }}">{{ o.status }}</button>
+              <button onClick="{{ o.del }}" style="border:none;background:transparent;color:#C4BEB4;width:34px;height:34px;font-size:15px;line-height:1;cursor:pointer;border-radius:9px;flex:none" style-hover="color:#B4675C">×</button>
+            </div>
+          </sc-for>
+        </div>
+
+        <div style="background:#F1EEE7;border:1px solid #E4E0D8;border-radius:16px;padding:clamp(16px,3vw,22px) clamp(16px,3.2vw,24px)">
+          <div style="font-size:13.5px;font-weight:500;margin-bottom:14px">วิธีบริหารสต็อกเมื่อทุนน้อยและลีดไทม์ 15 วัน</div>
+          <sc-for list="{{ advice }}" as="a" hint-placeholder-count="5">
+            <div style="display:flex;gap:12px;padding:10px 0;border-top:1px solid #E4E0D8">
+              <div style="font-size:11px;font-weight:400;color:#A19A8E;width:18px;flex:none;padding-top:3px">{{ a.n }}</div>
+              <div>
+                <div style="font-size:12.5px;font-weight:500;margin-bottom:3px">{{ a.title }}</div>
+                <div style="font-size:12px;font-weight:300;color:#6E6860;line-height:1.65;text-wrap:pretty">{{ a.body }}</div>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ isTodo }}">
+      <div>
+        <div style="font-size:11px;font-weight:400;letter-spacing:0.2em;color:#A19A8E;text-transform:uppercase;margin-bottom:7px">เช็คลิสต์</div>
+        <div style="font-size:clamp(21px,4.4vw,26px);font-weight:400;letter-spacing:-0.01em;margin-bottom:10px">สิ่งที่ต้องทำ</div>
+        <div style="font-size:12.5px;font-weight:300;color:#8C867C;margin-bottom:24px;max-width:820px;text-wrap:pretty">ใส่เวลาที่ต้องทำได้ ติ๊กเมื่อทำเสร็จ รายการจะถูกเก็บไว้ให้อัตโนมัติ</div>
+
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:12px;align-items:start">
+          <div style="background:#FFFDFA;border:1px solid #EBE7DF;border-radius:16px;padding:clamp(16px,3vw,22px) clamp(16px,3.2vw,24px)">
+            <div style="font-size:13.5px;font-weight:500;margin-bottom:14px">เพิ่มรายการ</div>
+            <div style="display:grid;gap:12px">
+              <div>
+                <div style="font-size:11.5px;font-weight:400;color:#9A9388;margin-bottom:7px">สิ่งที่ต้องทำ</div>
+                <input value="{{ newTaskText }}" onChange="{{ onNewTaskText }}" placeholder="เช่น แพคของรอบเช้า" style="width:100%;border:1px solid #E0DBD2;background:#FDFCF9;border-radius:10px;padding:13px 13px;font-size:14px" />
+              </div>
+              <div>
+                <div style="font-size:11.5px;font-weight:400;color:#9A9388;margin-bottom:7px">เวลา</div>
+                <input type="time" value="{{ newTaskTime }}" onChange="{{ onNewTaskTime }}" style="width:100%;border:1px solid #E0DBD2;background:#FDFCF9;border-radius:10px;padding:13px 13px;font-size:14px" />
+              </div>
+              <button onClick="{{ addTask }}" style="border:none;background:#1B1A18;color:#F6F4F0;border-radius:11px;padding:12px;font-size:13px;font-weight:500;cursor:pointer" style-hover="background:#332F2A">เพิ่มลงเช็คลิสต์</button>
+            </div>
+          </div>
+
+          <div style="background:#F7F6F0;border:1px solid #DCD7CE;border-radius:16px;padding:clamp(16px,3vw,22px) clamp(16px,3.2vw,24px)">
+            <div style="display:flex;align-items:baseline;gap:10px;margin-bottom:14px">
+              <div style="font-size:13.5px;font-weight:500">รายการทั้งหมด</div>
+              <div style="flex:1"></div>
+              <div style="font-size:12px;font-weight:400;color:#8C867C">{{ taskCount }}</div>
+            </div>
+            <sc-if value="{{ taskEmpty }}">
+              <div style="border:1px dashed #DCD7CE;border-radius:12px;padding:26px;text-align:center;font-size:12.5px;font-weight:300;color:#A19A8E">ยังไม่มีรายการ</div>
+            </sc-if>
+            <sc-for list="{{ taskRows }}" as="t" hint-placeholder-count="0">
+              <div style="display:flex;align-items:center;gap:11px;padding:11px 0;border-top:1px solid #E7E3DB">
+                <button onClick="{{ t.toggle }}" style="{{ t.box }}">{{ t.mark }}</button>
+                <div style="{{ t.textStyle }}">{{ t.text }}</div>
+                <input type="time" value="{{ t.time }}" onChange="{{ t.onTime }}" style="border:1px solid #E4E0D8;background:#FDFCF9;border-radius:8px;padding:5px 8px;font-size:12px;flex:none" />
+                <button onClick="{{ t.del }}" style="border:none;background:transparent;color:#C4BEB4;width:34px;height:34px;font-size:15px;line-height:1;cursor:pointer;border-radius:9px;flex:none" style-hover="color:#B4675C">×</button>
+              </div>
+            </sc-for>
+            <button onClick="{{ clearDoneTasks }}" style="width:100%;border:none;background:transparent;color:#A19A8E;border-radius:11px;padding:9px;font-size:12px;font-weight:300;cursor:pointer;margin-top:10px" style-hover="color:#B4675C">ล้างรายการที่ทำเสร็จ</button>
+          </div>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ isLedger }}">
+      <div>
+        <div style="font-size:11px;font-weight:400;letter-spacing:0.2em;color:#A19A8E;text-transform:uppercase;margin-bottom:7px">บัญชี</div>
+        <div style="font-size:clamp(21px,4.4vw,26px);font-weight:400;letter-spacing:-0.01em;margin-bottom:24px">รายรับ-รายจ่าย</div>
+
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px;margin-bottom:12px">
+          <sc-for list="{{ walletCards }}" as="w" hint-placeholder-count="3">
+            <div style="background:#FFFDFA;border:1px solid #EBE7DF;border-radius:16px;padding:20px 22px">
+              <div style="font-size:12.5px;font-weight:500;color:#6E6860">{{ w.name }}</div>
+              <div style="font-size:10.5px;font-weight:300;color:#A19A8E;margin-top:3px">{{ w.count }}</div>
+              <div style="font-size:26px;font-weight:600;letter-spacing:-0.02em;margin-top:12px;color:{{ w.balColor }}">{{ w.balance }}</div>
+              <div style="display:flex;gap:14px;margin-top:10px;font-size:11px;font-weight:300">
+                <span style="color:#6F8763">รับ {{ w.income }}</span>
+                <span style="color:#B4675C">จ่าย {{ w.expense }}</span>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+
+        <div style="background:#F7F6F0;border:1px solid #DCD7CE;border-radius:16px;padding:clamp(16px,3vw,22px) clamp(16px,3.2vw,24px);margin-bottom:12px">
+          <div style="display:flex;flex-wrap:wrap;align-items:baseline;gap:12px;margin-bottom:14px">
+            <div style="font-size:13.5px;font-weight:500">โอนเงินระหว่างกระเป๋า</div>
+            <div style="flex:1;min-width:160px;font-size:11.5px;font-weight:300;color:#8C867C">{{ xferLabel }}</div>
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;align-items:start">
+            <div>
+              <div style="font-size:11.5px;font-weight:400;color:#9A9388;margin-bottom:8px">จากกระเป๋า</div>
+              <div style="display:flex;flex-wrap:wrap;gap:6px">
+                <sc-for list="{{ xferFromOptions }}" as="w" hint-placeholder-count="3">
+                  <button onClick="{{ w.pick }}" style="{{ w.style }}">{{ w.label }}</button>
+                </sc-for>
+              </div>
+            </div>
+            <div>
+              <div style="font-size:11.5px;font-weight:400;color:#9A9388;margin-bottom:8px">ไปกระเป๋า</div>
+              <div style="display:flex;flex-wrap:wrap;gap:6px">
+                <sc-for list="{{ xferToOptions }}" as="w" hint-placeholder-count="2">
+                  <button onClick="{{ w.pick }}" style="{{ w.style }}">{{ w.label }}</button>
+                </sc-for>
+              </div>
+            </div>
+            <div style="display:flex;gap:8px;align-items:flex-end">
+              <div style="flex:1;min-width:0">
+                <div style="font-size:11.5px;font-weight:400;color:#9A9388;margin-bottom:8px">จำนวนที่โอน</div>
+                <input value="{{ xferAmount }}" onChange="{{ onXferAmount }}" inputmode="numeric" placeholder="0" style="width:100%;border:1px solid #E0DBD2;background:#FDFCF9;border-radius:10px;padding:13px 13px;font-size:14px;text-align:right" />
+              </div>
+              <button onClick="{{ transfer }}" style="border:none;background:#3F6480;color:#FFFDFA;border-radius:10px;padding:11px 20px;font-size:13px;font-weight:500;cursor:pointer;flex:none;white-space:nowrap" style-hover="background:#33526A">โอนเงิน</button>
+            </div>
+          </div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px;margin-bottom:12px">
+          <div style="background:#FFFDFA;border:1px solid #EBE7DF;border-radius:16px;padding:clamp(16px,3vw,22px) clamp(16px,3.2vw,24px)">
+            <div style="font-size:13.5px;font-weight:500;margin-bottom:16px">บันทึกรายการ</div>
+            <div style="display:grid;gap:12px">
+              <div>
+                <div style="font-size:11.5px;font-weight:400;color:#9A9388;margin-bottom:7px">วันที่</div>
+                <input type="date" value="{{ newLedgerDate }}" onChange="{{ onNewLedgerDate }}" style="width:100%;border:1px solid #E0DBD2;background:#FDFCF9;border-radius:10px;padding:13px 13px;font-size:14px" />
+              </div>
+              <div>
+                <div style="font-size:11.5px;font-weight:400;color:#9A9388;margin-bottom:7px">กระเป๋า</div>
+                <div style="display:flex;flex-wrap:wrap;gap:6px">
+                  <sc-for list="{{ walletOptions }}" as="w" hint-placeholder-count="3">
+                    <button onClick="{{ w.pick }}" style="{{ w.style }}">{{ w.label }}</button>
+                  </sc-for>
+                </div>
+              </div>
+              <div>
+                <div style="font-size:11.5px;font-weight:400;color:#9A9388;margin-bottom:7px">ประเภท</div>
+                <select value="{{ newLedgerType }}" onChange="{{ onNewLedgerType }}" style="width:100%;border:1px solid #E0DBD2;background:#FDFCF9;border-radius:10px;padding:13px 13px;font-size:14px">
+                  <option value="income">รายรับ</option>
+                  <option value="expense">รายจ่าย</option>
+                </select>
+              </div>
+              <div>
+                <div style="font-size:11.5px;font-weight:400;color:#9A9388;margin-bottom:7px">จำนวน</div>
+                <input type="number" value="{{ newLedgerAmount }}" onChange="{{ onNewLedgerAmount }}" inputmode="numeric" placeholder="0" style="width:100%;border:1px solid #E0DBD2;background:#FDFCF9;border-radius:10px;padding:13px 13px;font-size:14px;text-align:right" />
+              </div>
+              <div>
+                <div style="font-size:11.5px;font-weight:400;color:#9A9388;margin-bottom:7px">หมายเหตุ</div>
+                <input value="{{ newLedgerNote }}" onChange="{{ onNewLedgerNote }}" placeholder="เช่น เงินเดือน ค่าเช่า" style="width:100%;border:1px solid #E0DBD2;background:#FDFCF9;border-radius:10px;padding:13px 13px;font-size:14px" />
+              </div>
+              <button onClick="{{ addLedger }}" style="border:none;background:#1B1A18;color:#F6F4F0;border-radius:11px;padding:12px;font-size:13px;font-weight:500;cursor:pointer" style-hover="background:#332F2A">บันทึก</button>
+            </div>
+          </div>
+
+          <div style="background:#FFFDFA;border:1px solid #DCD7CE;border-radius:16px;padding:clamp(16px,3vw,22px) clamp(16px,3.2vw,24px)">
+            <div style="font-size:13.5px;font-weight:500;margin-bottom:6px">สรุป</div>
+            <div style="font-size:11.5px;font-weight:300;color:#8C867C;margin-bottom:18px">รวมทั้งหมด · ไม่รวมการโอนระหว่างกระเป๋า</div>
+            <div style="display:grid;gap:12px">
+              <div style="display:flex;align-items:baseline;gap:8px">
+                <span style="font-size:12px;font-weight:400;color:#9A9388">รายรับ</span>
+                <span style="flex:1"></span>
+                <span style="font-size:15px;font-weight:500;color:{{ ledgerTotal.incomeColor }}">{{ ledgerTotal.income }} ฿</span>
+              </div>
+              <div style="display:flex;align-items:baseline;gap:8px;border-top:1px solid #F2EFE8;padding-top:10px">
+                <span style="font-size:12px;font-weight:400;color:#9A9388">รายจ่าย</span>
+                <span style="flex:1"></span>
+                <span style="font-size:15px;font-weight:500;color:{{ ledgerTotal.expenseColor }}">{{ ledgerTotal.expense }} ฿</span>
+              </div>
+              <div style="display:flex;align-items:baseline;gap:8px;border-top:1px solid #DCD7CE;padding-top:12px;margin-top:2px">
+                <span style="font-size:12.5px;font-weight:500;color:#6E6860">ยอดคงเหลือปัจจุบัน</span>
+                <span style="flex:1"></span>
+                <span style="font-size:24px;font-weight:600;letter-spacing:-0.02em;color:{{ ledgerTotal.netColor }}">{{ ledgerTotal.net }} ฿</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div style="background:#FFFDFA;border:1px solid #EBE7DF;border-radius:16px;overflow-x:auto;margin-bottom:12px">
+          <div style="padding:22px 24px 14px">
+            <div style="font-size:13.5px;font-weight:500">สรุปรายเดือน</div>
+            <div style="font-size:11.5px;font-weight:300;color:#A19A8E;margin-top:4px">ยอดคงเหลือคือยอดสะสมถึงสิ้นเดือนนั้น</div>
+          </div>
+          <sc-if value="{{ ledgerMonthsEmpty }}">
+            <div style="padding:0 24px 24px">
+              <div style="border:1px dashed #DCD7CE;border-radius:12px;padding:24px;text-align:center;font-size:12.5px;font-weight:300;color:#A19A8E">ยังไม่มีรายการ</div>
+            </div>
+          </sc-if>
+          <div style="display:grid;grid-template-columns:minmax(110px,1fr) 100px 100px 100px 110px;min-width:560px;gap:10px;padding:14px clamp(14px,3vw,24px);background:#FBF9F5;border-top:1px solid #EFEBE3;border-bottom:1px solid #EFEBE3;font-size:11px;font-weight:400;color:#9A9388;letter-spacing:0.06em">
+            <span>เดือน</span><span style="text-align:right">รายรับ</span><span style="text-align:right">รายจ่าย</span><span style="text-align:right">สุทธิ</span><span style="text-align:right">คงเหลือ</span>
+          </div>
+          <sc-for list="{{ ledgerMonths }}" as="m" hint-placeholder-count="3">
+            <div style="display:grid;grid-template-columns:minmax(110px,1fr) 100px 100px 100px 110px;min-width:560px;gap:10px;align-items:center;padding:12px 24px;border-bottom:1px solid #F5F2EC">
+              <div style="min-width:0">
+                <div style="font-size:13px;font-weight:400">{{ m.label }}</div>
+                <div style="font-size:10.5px;font-weight:300;color:#A19A8E">{{ m.count }}</div>
+              </div>
+              <span style="font-size:12.5px;font-weight:400;color:#6F8763;text-align:right">{{ m.income }}</span>
+              <span style="font-size:12.5px;font-weight:400;color:#B4675C;text-align:right">{{ m.expense }}</span>
+              <span style="font-size:13px;font-weight:500;text-align:right;color:{{ m.netColor }}">{{ m.net }}</span>
+              <span style="font-size:12.5px;font-weight:400;color:#6E6860;text-align:right">{{ m.balance }}</span>
+            </div>
+          </sc-for>
+        </div>
+
+        <div style="background:#FFFDFA;border:1px solid #EBE7DF;border-radius:16px;padding:clamp(16px,3vw,22px) clamp(16px,3.2vw,24px)">
+          <div style="font-size:13.5px;font-weight:500;margin-bottom:14px">ประวัติการบันทึก</div>
+          <sc-if value="{{ ledgerEmpty }}">
+            <div style="border:1px dashed #DCD7CE;border-radius:12px;padding:24px;text-align:center;font-size:12.5px;font-weight:300;color:#A19A8E">ยังไม่มีรายการ</div>
+          </sc-if>
+          <sc-for list="{{ ledgerRows }}" as="l" hint-placeholder-count="5">
+            <div style="display:flex;align-items:center;gap:12px;padding:12px 0;border-top:1px solid #F5F2EC">
+              <div style="flex:1;min-width:0">
+                <div style="font-size:13px;font-weight:400">{{ l.date }} · <span style="color:{{ l.typeColor }};font-weight:500">{{ l.type }}</span></div>
+                <div style="font-size:11px;font-weight:300;color:#A19A8E;margin-top:2px">{{ l.note }}</div>
+              </div>
+              <div style="font-size:14px;font-weight:500;color:{{ l.typeColor }};flex:none;white-space:nowrap">{{ l.amount }}</div>
+              <button onClick="{{ l.del }}" style="border:none;background:transparent;color:#C4BEB4;width:34px;height:34px;font-size:15px;line-height:1;cursor:pointer;border-radius:9px;flex:none" style-hover="color:#B4675C">×</button>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ isReport }}">
+      <div>
+        <div style="font-size:11px;font-weight:400;letter-spacing:0.2em;color:#A19A8E;text-transform:uppercase;margin-bottom:7px">รายงาน</div>
+        <div style="font-size:26px;font-weight:400;margin-bottom:18px">ย้อนหลังรายวัน</div>
+        <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px">
+          <sc-for list="{{ ranges }}" as="r" hint-placeholder-count="3">
+            <button onClick="{{ r.go }}" style="{{ r.style }}">{{ r.label }}</button>
+          </sc-for>
+          <div style="flex:1"></div>
+          <button onClick="{{ exportCsv }}" style="border:1px solid #DCD7CE;background:#FFFDFA;color:#1B1A18;border-radius:10px;padding:9px 16px;font-size:12.5px;font-weight:400;cursor:pointer" style-hover="background:#F1EEE7">ส่งออก CSV</button>
+          <button onClick="{{ resetDemo }}" style="border:1px solid #E8E3DA;background:transparent;color:#A19A8E;border-radius:10px;padding:9px 16px;font-size:12.5px;font-weight:300;cursor:pointer" style-hover="color:#B4675C;border-color:#E3CFC9">ล้างข้อมูลตัวอย่าง</button>
+        </div>
+        <div style="background:#FFFDFA;border:1px solid #EBE7DF;border-radius:16px;overflow-x:auto">
+          <div style="display:grid;grid-template-columns:minmax(150px,1fr) 76px 96px 92px 92px 104px;min-width:660px;gap:10px;padding:14px clamp(14px,3vw,22px);background:#FBF9F5;border-bottom:1px solid #EFEBE3;font-size:11px;font-weight:400;color:#9A9388;letter-spacing:0.06em">
+            <span>วันที่</span><span style="text-align:right">ชิ้น</span><span style="text-align:right">ยอดขาย</span><span style="text-align:right">ต้นทุนรวม</span><span style="text-align:right">โฆษณา</span><span style="text-align:right">กำไรสุทธิ</span>
+          </div>
+          <sc-for list="{{ reportRows }}" as="r" hint-placeholder-count="10">
+            <div style="display:grid;grid-template-columns:minmax(150px,1fr) 76px 96px 92px 92px 104px;min-width:660px;gap:10px;align-items:center;padding:11px 22px;border-bottom:1px solid #F5F2EC">
+              <div style="font-size:12.5px;font-weight:400">{{ r.date }}</div>
+              <span style="font-size:12.5px;font-weight:300;color:#6E6860;text-align:right">{{ r.units }}</span>
+              <span style="font-size:12.5px;font-weight:300;color:#6E6860;text-align:right">{{ r.revenue }}</span>
+              <span style="font-size:12.5px;font-weight:300;color:#6E6860;text-align:right">{{ r.cost }}</span>
+              <span style="font-size:12.5px;font-weight:300;color:#6E6860;text-align:right">{{ r.ad }}</span>
+              <span style="font-size:13px;font-weight:500;text-align:right;color:{{ r.color }}">{{ r.net }}</span>
+            </div>
+          </sc-for>
+          <div style="display:grid;grid-template-columns:minmax(150px,1fr) 76px 96px 92px 92px 104px;min-width:660px;gap:10px;padding:16px clamp(14px,3vw,22px);background:#FBF9F5">
+            <div style="font-size:12.5px;font-weight:500">{{ reportTotalLabel }}</div>
+            <span style="font-size:12.5px;font-weight:500;text-align:right">{{ reportTotal.units }}</span>
+            <span style="font-size:12.5px;font-weight:500;text-align:right">{{ reportTotal.revenue }}</span>
+            <span style="font-size:12.5px;font-weight:500;text-align:right">{{ reportTotal.cost }}</span>
+            <span style="font-size:12.5px;font-weight:500;text-align:right">{{ reportTotal.ad }}</span>
+            <span style="font-size:13.5px;font-weight:600;text-align:right">{{ reportTotal.net }}</span>
+          </div>
+        </div>
+      </div>
+    </sc-if>
+
+  </div>
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{}">
+const KEY = 'moonlab_stock_v1';
+const LEAD = 15, SAFETY = 7, THRESHOLD = 8;
+const WALLETS = ['กระเป๋า มูนแลป', 'CEO ART', 'CEO MIU'];
+const INK = '#1B1A18', GREEN = '#6F8763', RED = '#B4675C', AMBER = '#C09A54', MUTE = '#8C867C';
+
+const PKG_DEFAULT = [
+  { name: 'ถุงกำมะหยี่', cost: 4, stock: 180 },
+  { name: 'กล่อง AA', cost: 6, stock: 120 },
+  { name: 'ถุงซิป', cost: 0.5, stock: 400 },
+  { name: 'กล่อง O', cost: 5, stock: 90 },
+  { name: 'กล่อง A', cost: 7, stock: 60 },
+  { name: 'บับเบิ้ล', cost: 1.5, stock: 250 },
+  { name: 'ซองแบรนด์ Moonlab', cost: 2.5, stock: 300 },
+  { name: 'การ์ดขอบคุณ', cost: 1, stock: 210 },
+  { name: 'สติกเกอร์', cost: 0.5, stock: 500 }
+];
+
+const RULES = {
+  'สร้อยคอ': { 'ถุงกำมะหยี่': 1, 'กล่อง A': 1, 'บับเบิ้ล': 1, 'ซองแบรนด์ Moonlab': 1, 'การ์ดขอบคุณ': 1, 'สติกเกอร์': 1 },
+  'สร้อยคอและจี้จากไข่มุก': { 'ถุงกำมะหยี่': 1, 'กล่อง A': 1, 'บับเบิ้ล': 1, 'ซองแบรนด์ Moonlab': 1, 'การ์ดขอบคุณ': 1, 'สติกเกอร์': 1 },
+  'สร้อยข้อมือและกำไล': { 'ถุงกำมะหยี่': 1, 'กล่อง AA': 1, 'ซองแบรนด์ Moonlab': 1, 'การ์ดขอบคุณ': 1, 'สติกเกอร์': 1 },
+  'กำไลข้อเท้า': { 'ถุงกำมะหยี่': 1, 'กล่อง AA': 1, 'ซองแบรนด์ Moonlab': 1, 'การ์ดขอบคุณ': 1, 'สติกเกอร์': 1 },
+  'แหวนจากเงิน': { 'ถุงซิป': 1, 'กล่อง O': 1, 'ซองแบรนด์ Moonlab': 1, 'การ์ดขอบคุณ': 1, 'สติกเกอร์': 1 },
+  'ต่างหู': { 'ถุงซิป': 1, 'กล่อง O': 1, 'ซองแบรนด์ Moonlab': 1, 'การ์ดขอบคุณ': 1, 'สติกเกอร์': 1 },
+  'นาฬิกาสำหรับสตรี': { 'ถุงกำมะหยี่': 1, 'กล่อง AA': 1, 'บับเบิ้ล': 1, 'ซองแบรนด์ Moonlab': 1, 'การ์ดขอบคุณ': 1, 'สติกเกอร์': 1 }
+};
+
+const CHANNELS = [
+  { name: 'TikTok Shop', fee: 8 },
+  { name: 'Shopee', fee: 8 },
+  { name: 'LINE / Facebook', fee: 0 }
+];
+
+const NAV = [
+  { key: 'dash', label: 'ภาพรวม' },
+  { key: 'entry', label: 'บันทึกขาย' },
+  { key: 'stock', label: 'สต็อกสินค้า' },
+  { key: 'pkg', label: 'แพคเกจ' },
+  { key: 'items', label: 'สินค้า/ต้นทุน' },
+  { key: 'plan', label: 'วางแผนสั่งของ' },
+  { key: 'report', label: 'รายงาน' },
+  { key: 'todo', label: 'เช็คลิสต์' },
+  { key: 'ledger', label: 'บัญชี' }
+];
+
+const normTh = s => String(s || '')
+  .replace(/[\u0E31\u0E33-\u0E3A\u0E47-\u0E4E]/g, '')
+  .replace(/[^\u0E00-\u0E7Fa-zA-Z0-9]/g, '')
+  .toLowerCase();
+const trigrams = s => { const t = {}; const n = normTh(s); for (let i = 0; i < n.length - 2; i++) t[n.slice(i, i + 3)] = 1; return t; };
+const trigScore = (a, b) => {
+  const ka = Object.keys(a); if (!ka.length) return 0;
+  let hit = 0; ka.forEach(k => { if (b[k]) hit++; });
+  return hit / ka.length;
+};
+
+function parseLabels(text) {
+  const chunks = text.split(/--\s*\d+\s+of\s+\d+\s*--/);
+  const orders = {};
+  chunks.forEach(ch => {
+    const oidM = ch.match(/Order ID:\s*(\d{8,})/) || ch.match(/Order ID\s*\n\s*(\d{8,})/);
+    const oid = oidM ? oidM[1] : null;
+    if (!oid) return;
+    const dM = ch.match(/Shipping Date:\s*(\d{2})-(\d{2})-(\d{4})/);
+    const date = dM ? dM[3] + '-' + dM[2] + '-' + dM[1] : null;
+    const o = orders[oid] || (orders[oid] = { oid, date: null, items: [] });
+    if (date) o.date = date;
+    const lines = ch.split('\n');
+    let buf = null;
+    lines.forEach(ln => {
+      if (/Moonlab\.|MOOLAB\./i.test(ln)) buf = [ln.replace(/.*?\|/, '')];
+      else if (buf) {
+        const q = ln.match(/^(.*?)\t\s*(\d+)\s*$/);
+        if (q) {
+          o.items.push({ name: buf.join(' ').trim(), variant: q[1].trim(), qty: Math.max(1, parseInt(q[2], 10)) });
+          buf = null;
+        } else if (/Qty Total|Order ID|Product Name/i.test(ln)) buf = null;
+        else buf.push(ln);
+      }
+    });
+  });
+  const out = [];
+  Object.keys(orders).forEach(k => {
+    const o = orders[k];
+    const seen = {};
+    o.items.forEach(it => {
+      const key = normTh(it.name) + '|' + normTh(it.variant);
+      if (seen[key]) { seen[key].qty = Math.max(seen[key].qty, it.qty); return; }
+      const row = { oid: o.oid, date: o.date, ...it };
+      seen[key] = row; out.push(row);
+    });
+  });
+  return out;
+}
+
+const iso = d => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+const dayDiff = (a, b) => Math.round((new Date(a + 'T00:00:00') - new Date(b + 'T00:00:00')) / 86400000);
+const today = () => iso(new Date());
+const addDays = (s, n) => { const d = new Date(s + 'T00:00:00'); d.setDate(d.getDate() + n); return iso(d); };
+const nf = n => Math.round(n).toLocaleString('en-US');
+const nf1 = n => (Math.round(n * 10) / 10).toLocaleString('en-US', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+const thDate = s => {
+  const d = new Date(s + 'T00:00:00');
+  const m = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
+  return d.getDate() + ' ' + m[d.getMonth()] + ' ' + String(d.getFullYear() + 543).slice(2);
+};
+const decodeEnt = s => String(s || '')
+  .replace(/&#x([0-9a-fA-F]+);/g, (m, h) => String.fromCodePoint(parseInt(h, 16)))
+  .replace(/&#(\d+);/g, (m, d) => String.fromCodePoint(+d))
+  .replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"')
+  .replace(/\s+/g, ' ').trim();
+const shortName = src => {
+  let full = String(src || '').trim(), prev;
+  do { prev = full; full = full.replace(/^(สินค้าใหม่|ใหม่|new)\s*!*\s*/i, '').replace(/^(moonlab|moolab)\.?\s*\|\s*/i, '').trim(); } while (full !== prev);
+  const m = full.match(/[’‘'"“”]([^’‘'"“”]{2,40})[‘’'"“”]/);
+  if (m) return m[1].trim();
+  return full.split(/[|·\-–]/)[0].trim().slice(0, 46);
+};
+const num = v => { const n = parseFloat(String(v).replace(/[^0-9.\-]/g, '')); return isFinite(n) ? n : 0; };
+
+function pill(active) {
+  return {
+    border: active ? '1px solid ' + INK : '1px solid #E0DBD2',
+    background: active ? INK : 'transparent',
+    color: active ? '#F6F4F0' : '#6E6860',
+    borderRadius: 999, padding: '11px 17px', fontSize: 13, minHeight: 44,
+    fontWeight: active ? 500 : 300, cursor: 'pointer', whiteSpace: 'nowrap',
+    fontFamily: "'Prompt',sans-serif"
+  };
+}
+function tab(active) {
+  return {
+    border: 'none', background: 'transparent', cursor: 'pointer',
+    padding: '13px 15px 14px', fontSize: 13.5, minHeight: 46, whiteSpace: 'nowrap',
+    fontWeight: active ? 500 : 300, color: active ? INK : '#9A9388',
+    borderBottom: active ? '1.5px solid ' + INK : '1.5px solid transparent',
+    marginBottom: -1, fontFamily: "'Prompt',sans-serif"
+  };
+}
+
+class Component extends DCLogic {
+  state = {
+    tab: 'dash', loaded: false, products: [], sales: [], pkg: [], adSpend: {}, rules: RULES,
+    date: today(), q: '', pq: '', cat: 'ทั้งหมด', selId: '',
+    qty: '1', price: '', disc: '', ship: '', ch: 'TikTok Shop',
+    range: 7, budget: '20000', toast: '',
+    newPkgName: '', newPkgCost: '', newPkgStock: '',
+    importRows: [], importNote: '', excelNote: '', importedOrders: [], cart: [], okBanner: '',
+    itemsExcelNote: '',
+    editingId: '', editingField: '', editingValue: '',
+    tasks: [], newTaskText: '', newTaskTime: '',
+    orders: [], newOrderDate: today(), newOrderAmount: '', newOrderNote: '',
+    planShowCats: Object.keys(RULES).reduce((a, c) => ({ ...a, [c]: true }), {}),
+    ledger: [], newLedgerDate: today(), newLedgerType: 'income', newLedgerAmount: '', newLedgerNote: '', newLedgerWallet: WALLETS[0],
+    xferFrom: WALLETS[0], xferTo: WALLETS[1], xferAmount: '',
+    locked: true, pin: '', pinErr: '',
+    sync: { state: 'local', msg: '' }, who: ''
+  };
+
+  addLedger = () => {
+    const amt = num(this.state.newLedgerAmount);
+    if (!amt) return;
+    this.set({
+      ledger: [...this.state.ledger, {
+        id: 'l' + Date.now(), date: this.state.newLedgerDate, type: this.state.newLedgerType,
+        amount: amt, note: this.state.newLedgerNote.trim(), wallet: this.state.newLedgerWallet || WALLETS[0]
+      }],
+      newLedgerAmount: '', newLedgerNote: ''
+    });
+  };
+  delLedger(id) { this.set({ ledger: this.state.ledger.filter(l => l.id !== id) }); }
+
+  transfer = () => {
+    const st = this.state;
+    const amt = num(st.xferAmount);
+    if (!amt || st.xferFrom === st.xferTo) return;
+    const t = Date.now();
+    const note = 'โอน ' + st.xferFrom + ' → ' + st.xferTo;
+    this.set({
+      ledger: [...st.ledger,
+        { id: 'x' + t + 'a', date: today(), type: 'expense', amount: amt, note, wallet: st.xferFrom, xfer: true },
+        { id: 'x' + t + 'b', date: today(), type: 'income', amount: amt, note, wallet: st.xferTo, xfer: true }
+      ],
+      xferAmount: ''
+    });
+  };
+
+  addOrder = () => {
+    const amt = num(this.state.newOrderAmount);
+    if (!amt) return;
+    this.set({
+      orders: [...this.state.orders, {
+        id: 'o' + Date.now(), date: this.state.newOrderDate || today(),
+        amount: amt, note: this.state.newOrderNote.trim(), status: 0
+      }],
+      newOrderAmount: '', newOrderNote: ''
+    });
+  };
+  cycleOrder(id) { this.set({ orders: this.state.orders.map(o => o.id === id ? { ...o, status: (o.status + 1) % 3 } : o) }); }
+  delOrder(id) { this.set({ orders: this.state.orders.filter(o => o.id !== id) }); }
+
+  addTask = () => {
+    const t = this.state.newTaskText.trim();
+    if (!t) return;
+    this.set({
+      tasks: [...this.state.tasks, { id: 't' + Date.now(), text: t, time: this.state.newTaskTime, done: false }],
+      newTaskText: '', newTaskTime: ''
+    });
+  };
+  toggleTask(id) { this.set({ tasks: this.state.tasks.map(t => t.id === id ? { ...t, done: !t.done } : t) }); }
+  delTask(id) { this.set({ tasks: this.state.tasks.filter(t => t.id !== id) }); }
+  setTaskTime(id, v) { this.set({ tasks: this.state.tasks.map(t => t.id === id ? { ...t, time: v } : t) }); }
+  clearDoneTasks = () => this.set({ tasks: this.state.tasks.filter(t => !t.done) });
+
+  addPkg = () => {
+    const name = this.state.newPkgName.trim();
+    if (!name) return;
+    if (this.state.pkg.some(p => p.name === name)) return this.setState({ newPkgName: '' });
+    this.set({
+      pkg: [...this.state.pkg, { name, cost: num(this.state.newPkgCost), stock: Math.round(num(this.state.newPkgStock)), custom: true }],
+      newPkgName: '', newPkgCost: '', newPkgStock: ''
+    });
+  };
+  delPkg(name) { this.set({ pkg: this.state.pkg.filter(p => p.name !== name) }); }
+  bumpPkg(name, d) {
+    this.set({ pkg: this.state.pkg.map(p => p.name === name ? { ...p, stock: Math.max(0, p.stock + d) } : p) });
+  }
+
+  pinPress = n => {
+    const pin = (this.state.pin + n).slice(0, 3);
+    if (pin.length === 3) {
+      if (pin === '777') {
+        try { sessionStorage.setItem('moonlab_unlocked', '1'); } catch (e) { }
+        this.setState({ locked: false, pin: '', pinErr: '' });
+      } else this.setState({ pin: '', pinErr: 'รหัสไม่ถูกต้อง' });
+      return;
+    }
+    this.setState({ pin, pinErr: '' });
+  };
+  pinClear = () => this.setState({ pin: '', pinErr: '' });
+
+  componentDidMount() {
+    let unlocked = false;
+    try { unlocked = sessionStorage.getItem('moonlab_unlocked') === '1'; } catch (e) { }
+    if (unlocked) this.setState({ locked: false });
+    this.boot();
+  }
+
+  /* ---- ข้อมูลกลาง: ลำดับคือ cache ในเครื่อง → คลาวด์ → products.json ---- */
+  async boot() {
+    const cloud = window.MoonlabCloud;
+    const online = !!(cloud && cloud.configure(window.MOONLAB_CONFIG || {}));
+    if (cloud) {
+      this.setState({ who: cloud.who() });
+      cloud.start({ onRemote: this.onRemote, onStatus: this.onSyncStatus });
+    }
+
+    /* 1) cache ในเครื่อง — ให้เปิดมาเห็นข้อมูลทันทีแม้เน็ตช้าหรือไม่มีเน็ต */
+    const saved = cloud ? cloud.cached() : null;
+    const hadLocal = !!(saved && saved.products && saved.products.length);
+    if (hadLocal) this.applySaved(saved);
+
+    /* 2) ของจริงจากคลาวด์ (ทับ cache ถ้ามี) */
+    if (online) {
+      const remote = await cloud.load();
+      if (remote && remote.products && remote.products.length) { this.applySaved(remote); return; }
+      if (hadLocal) { cloud.seed(this.snapshot()); return; }   /* คลาวด์ยังว่าง → อัปของเครื่องนี้ขึ้นไปตั้งต้น */
+    }
+    if (hadLocal) return;
+
+    /* 3) ครั้งแรกสุดของทั้งระบบ — สร้างจาก products.json */
+    let raw = [];
+    try { raw = await (await fetch('products.json')).json(); } catch (e) { }
+    const products = raw.map((p, i) => ({
+      id: p.sku || 'p' + i, name: decodeEnt(p.name), short: shortName(decodeEnt(p.name)), cat: decodeEnt(p.cat),
+      variant: (p.variant === 'ค่าเริ่มต้น' ? '' : decodeEnt(p.variant)),
+      price: p.price, cost: Math.round(p.price * 0.35), stock: p.qty
+    }));
+    const pkg = PKG_DEFAULT.map(p => ({ ...p }));
+    const { sales, adSpend } = this.demo(products);
+    this.setState({ products, pkg, sales, adSpend, loaded: true }, () => this.persist());
+  }
+
+  demo(products) {
+    let seed = 20260904;
+    const rnd = () => { seed = (seed * 1103515245 + 12345) % 2147483648; return seed / 2147483648; };
+    const pool = products.filter(p => p.stock > 0).slice(0, 26);
+    if (!pool.length) return { sales: [], adSpend: {} };
+    const sales = [], adSpend = {};
+    for (let d = 29; d >= 0; d--) {
+      const date = addDays(today(), -d);
+      const lines = 2 + Math.floor(rnd() * 5);
+      for (let i = 0; i < lines; i++) {
+        const p = pool[Math.floor(rnd() * pool.length)];
+        const c = CHANNELS[Math.floor(rnd() * (rnd() > 0.75 ? 3 : 2))];
+        const qty = rnd() > 0.82 ? 2 : 1;
+        sales.push({
+          id: 's' + d + '_' + i, date, sku: p.id, qty, price: p.price,
+          disc: rnd() > 0.7 ? 30 : 0, ship: rnd() > 0.5 ? 0 : 35,
+          ch: c.name, fee: c.fee, demo: true
+        });
+      }
+      adSpend[date] = 100 + Math.floor(rnd() * 5) * 50;
+    }
+    return { sales, adSpend };
+  }
+
+  /* ข้อมูลที่ต้องแชร์กันระหว่างเครื่อง (ที่เหลือเป็นสถานะหน้าจอ ไม่ต้อง sync) */
+  snapshot() {
+    const st = this.state;
+    return {
+      products: st.products, sales: st.sales, pkg: st.pkg, adSpend: st.adSpend, rules: st.rules,
+      importedOrders: st.importedOrders, tasks: st.tasks, orders: st.orders, ledger: st.ledger
+    };
+  }
+
+  normProducts(list) {
+    return (list || []).map(p => {
+      const name = decodeEnt(p.name);
+      return { ...p, name, cat: decodeEnt(p.cat), variant: decodeEnt(p.variant), short: shortName(name) };
+    });
+  }
+
+  applySaved(saved) {
+    let sales = saved.sales || [], adSpend = saved.adSpend || {};
+    const demoDates = sales.filter(s => s.demo).map(s => s.date).sort();
+    const last = demoDates[demoDates.length - 1];
+    const shift = last ? dayDiff(today(), last) : 0;
+    if (shift > 0) {
+      sales = sales.map(s => s.demo ? { ...s, date: addDays(s.date, shift) } : s);
+      const moved = {};
+      Object.keys(adSpend).forEach(d => { moved[addDays(d, shift)] = adSpend[d]; });
+      adSpend = moved;
+    }
+    this.setState({
+      products: this.normProducts(saved.products), sales,
+      pkg: saved.pkg || PKG_DEFAULT.map(p => ({ ...p })), adSpend,
+      rules: saved.rules || RULES, importedOrders: saved.importedOrders || [],
+      tasks: saved.tasks || [], orders: saved.orders || [], ledger: saved.ledger || [], loaded: true
+    }, () => { if (shift > 0) this.persist(); });
+  }
+
+  /* อีกเครื่องแก้ข้อมูล — รับเฉพาะ key ที่เปลี่ยน ไม่ต้องโหลดใหม่ทั้งหน้า */
+  onRemote = (key, data) => {
+    if (data === undefined || data === null) return;
+    const patch = {};
+    patch[key] = key === 'products' ? this.normProducts(data) : data;
+    this.setState(patch, () => {
+      if (window.MoonlabCloud) window.MoonlabCloud.cache(this.snapshot());
+    });
+  };
+
+  onSyncStatus = s => this.setState({ sync: s });
+
+  persist() {
+    const cloud = window.MoonlabCloud;
+    if (!cloud) return;
+    const snap = this.snapshot();
+    cloud.cache(snap);     /* เก็บลงเครื่องเสมอ ใช้ต่อได้ตอนเน็ตหลุด */
+    cloud.push(snap);      /* ส่งขึ้นคลาวด์เฉพาะส่วนที่เปลี่ยนจริง */
+  }
+
+  syncTap = () => {
+    const cloud = window.MoonlabCloud;
+    if (!cloud) return;
+    if (!cloud.enabled()) { this.setState({ sync: { state: 'local', msg: 'ยังไม่ได้ตั้งค่า config.js' } }); return; }
+    const cur = cloud.who();
+    const name = window.prompt('ใครใช้เครื่องนี้? (ชื่อนี้จะติดไปกับข้อมูลที่บันทึก)', cur === 'ไม่ระบุ' ? '' : cur);
+    if (name !== null && name.trim()) { cloud.setWho(name.trim()); this.setState({ who: name.trim() }); }
+    cloud.syncNow();
+  };
+
+  set(patch) { this.setState(patch, () => this.persist()); }
+
+  byId(id) { return this.state.products.find(p => p.id === id); }
+  rules() { return this.state.rules || RULES; }
+  rule(cat) { return this.rules()[cat] || { 'ถุงซิป': 1, 'ซองแบรนด์ Moonlab': 1, 'การ์ดขอบคุณ': 1, 'สติกเกอร์': 1 }; }
+  setRule(cat, name, n) {
+    const rules = { ...this.rules() };
+    const r = { ...(rules[cat] || {}) };
+    if (n <= 0) delete r[name]; else r[name] = n;
+    rules[cat] = r;
+    this.set({ rules });
+  }
+  pkgUnitCost(cat) {
+    const r = this.rule(cat);
+    return Object.keys(r).reduce((s, k) => {
+      const it = this.state.pkg.find(p => p.name === k);
+      return s + (it ? it.cost : 0) * r[k];
+    }, 0);
+  }
+  metrics(s) {
+    const p = this.byId(s.sku);
+    const gross = s.qty * s.price - (s.disc || 0);
+    const cost = (p ? p.cost : 0) * s.qty;
+    const fee = gross * (s.fee || 0) / 100;
+    const pk = this.pkgUnitCost(p ? p.cat : '') * s.qty;
+    const ship = s.ship || 0;
+    return { gross, cost, fee, pk, ship, net: gross - cost - fee - pk - ship };
+  }
+  daySales(date) { return this.state.sales.filter(s => s.date === date); }
+  agg(list, dates) {
+    let units = 0, revenue = 0, cost = 0, net = 0;
+    list.forEach(s => { const m = this.metrics(s); units += s.qty; revenue += m.gross; cost += m.cost + m.fee + m.pk + m.ship; net += m.net; });
+    const ad = (dates || []).reduce((a, d) => a + (this.state.adSpend[d] || 0), 0);
+    return { units, revenue, cost, ad, net: net - ad, orders: list.length };
+  }
+  dates(n, end) { const out = []; for (let i = n - 1; i >= 0; i--) out.push(addDays(end || today(), -i)); return out; }
+
+  onPdf = async e => {
+    const file = e.target.files && e.target.files[0];
+    e.target.value = '';
+    if (!file) return;
+    this.setState({ importNote: 'กำลังอ่านไฟล์ ' + file.name + ' …' });
+    try {
+      const mod = await import('https://cdn.jsdelivr.net/npm/pdf-parse@2.4.5/dist/pdf-parse/web/pdf-parse.es.js');
+      mod.PDFParse.setWorker('https://cdn.jsdelivr.net/npm/pdf-parse@2.4.5/dist/pdf-parse/web/pdf.worker.min.mjs');
+      const parser = new mod.PDFParse({ data: new Uint8Array(await file.arrayBuffer()) });
+      const res = await parser.getText();
+      const labels = parseLabels(res.text || '');
+      if (!labels.length) return this.setState({ importNote: 'อ่านไฟล์ได้ แต่ไม่พบรายการสินค้าในใบปะหน้า ลองไฟล์ที่ดาวน์โหลดจาก TikTok Seller Center โดยตรง' });
+      const done = this.state.importedOrders || [];
+      const cand = this.state.products.map(p => ({ p, tn: trigrams(p.name), tv: trigrams(p.variant || '') }));
+      const rows = [];
+      let dup = 0;
+      labels.forEach((l, i) => {
+        const key = l.oid + '|' + normTh(l.name) + '|' + normTh(l.variant);
+        if (done.indexOf(key) >= 0) { dup++; return; }
+        const tn = trigrams(l.name), tv = trigrams(l.variant);
+        const scored = cand.map(c => ({ p: c.p, s: trigScore(tn, c.tn) * 0.8 + trigScore(tv, c.tv) * 0.2 }))
+          .sort((a, b) => b.s - a.s);
+        const best = scored[0];
+        rows.push({
+          key, id: 'imp' + i, oid: l.oid, date: l.date || today(), qty: String(l.qty),
+          raw: l.name.replace(/\s+/g, ' ').slice(0, 70) + (l.variant ? ' · ' + l.variant : ''),
+          sku: best && best.s > 0.2 ? best.p.id : '',
+          price: best && best.s > 0.2 ? String(best.p.price) : '',
+          sure: !!best && best.s > 0.45,
+          cands: scored.slice(0, 8).map(x => x.p.id)
+        });
+      });
+      this.setState({
+        importRows: rows,
+        importNote: rows.length
+          ? 'อ่านได้ ' + labels.length + ' รายการจาก ' + file.name + (dup ? ' · ข้าม ' + dup + ' รายการที่บันทึกไปแล้ว' : '')
+          : 'ทุกรายการในไฟล์นี้บันทึกไปแล้ว'
+      });
+    } catch (err) {
+      this.setState({ importNote: 'อ่านไฟล์ไม่สำเร็จ: ' + (err && err.message ? err.message : 'ไฟล์อาจไม่ใช่ใบปะหน้า PDF') });
+    }
+  };
+
+  editImport(id, patch) {
+    this.setState({ importRows: this.state.importRows.map(r => r.id === id ? { ...r, ...patch } : r) });
+  }
+
+  confirmImport = () => {
+    const st = this.state;
+    const rows = st.importRows.filter(r => r.sku);
+    if (!rows.length) return this.setState({ importNote: 'ยังไม่มีแถวที่จับคู่กับสินค้า' });
+    let products = st.products, pkg = st.pkg;
+    const sales = [...st.sales];
+    const ch = CHANNELS[0];
+    rows.forEach((r, i) => {
+      const p = products.find(x => x.id === r.sku); if (!p) return;
+      const qty = Math.max(1, Math.round(num(r.qty)));
+      const price = num(r.price) || p.price;
+      sales.push({ id: 'lb' + Date.now() + '_' + i, date: r.date, sku: p.id, qty, price, disc: 0, ship: 0, ch: ch.name, fee: ch.fee, oid: r.oid });
+      products = products.map(x => x.id === p.id ? { ...x, stock: x.stock - qty } : x);
+      const rule = this.rule(p.cat);
+      pkg = pkg.map(x => rule[x.name] ? { ...x, stock: x.stock - rule[x.name] * qty } : x);
+    });
+    this.set({
+      sales, products, pkg,
+      importedOrders: [...(st.importedOrders || []), ...rows.map(r => r.key)],
+      importRows: [], importNote: ''
+    });
+    this.ok('อัพเดทแล้ว · บันทึกจากใบปะหน้า ' + rows.length + ' รายการ และตัดสต็อกสินค้ากับแพคเกจเรียบร้อย');
+  };
+
+  cancelImport = () => this.setState({ importRows: [], importNote: '' });
+
+  onTiktokExcel = e => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => {
+      try {
+        const buf = ev.target?.result;
+        if (!buf) return;
+        const wb = this.parseXlsx(buf);
+        const ws = wb[Object.keys(wb)[0]];
+        const rows = [];
+        const headers = ws[0] || [];
+        const nameIdx = headers.findIndex(h => /product|name|ชื่อ|สินค้า/i.test(h));
+        const qtyIdx = headers.findIndex(h => /qty|quantity|จำนวน|ชิ้น/i.test(h));
+        const dateIdx = headers.findIndex(h => /date|วันที่|วัน/i.test(h));
+        for (let i = 1; i < ws.length; i++) {
+          const row = ws[i] || [];
+          const name = row[nameIdx >= 0 ? nameIdx : 0] || '';
+          const qty = Math.max(1, Math.round(parseFloat(row[qtyIdx >= 0 ? qtyIdx : 1]) || 1));
+          const date = row[dateIdx >= 0 ? dateIdx : 2] || today();
+          if (name) rows.push({ name: String(name).trim(), variant: '', qty, date, oid: 'ex' + i, raw: name });
+        }
+        this.setState({ importRows: this.matchRows(rows), importedOrders: rows, excelNote: rows.length + ' รายการจากไฟล์ Excel' });
+      } catch (err) {
+        this.setState({ excelNote: 'ไม่สามารถอ่านไฟล์ได้ ตรวจสอบรูปแบบ Excel' });
+      }
+    };
+    reader.readAsArrayBuffer(file);
+  };
+
+  onItemsExcel = e => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    this.setState({ itemsExcelNote: 'กำลังอ่านไฟล์ ' + file.name + ' …' });
+    const reader = new FileReader();
+    reader.onload = ev => {
+      try {
+        const buf = ev.target?.result;
+        if (!buf) return;
+        const wb = this.parseXlsx(buf);
+        const ws = wb[Object.keys(wb)[0]];
+        const headers = ws[0] || [];
+        const nameIdx = headers.findIndex(h => /name|ชื่อ|สินค้า/i.test(h));
+        const priceIdx = headers.findIndex(h => /price|ราคา|ขาย/i.test(h));
+        const costIdx = headers.findIndex(h => /cost|ต้นทุน|ทุน|cogs/i.test(h));
+        let updated = 0;
+        let products = this.state.products;
+        for (let i = 1; i < ws.length; i++) {
+          const row = ws[i] || [];
+          const name = String(row[nameIdx >= 0 ? nameIdx : 0] || '').trim();
+          const price = num(row[priceIdx >= 0 ? priceIdx : 1]);
+          const cost = num(row[costIdx >= 0 ? costIdx : 2]);
+          if (!name) continue;
+          const match = products.find(p => p.name.toLowerCase().indexOf(name.toLowerCase()) >= 0 || name.toLowerCase().indexOf(p.short.toLowerCase()) >= 0);
+          if (match && (price > 0 || cost > 0)) {
+            products = products.map(p => p.id === match.id ? { ...p, ...(price > 0 && { price }), ...(cost > 0 && { cost }) } : p);
+            updated++;
+          }
+        }
+        this.set({ products });
+        this.setState({ itemsExcelNote: 'อัพเดทแล้ว ' + updated + ' รายการจากไฟล์ ' + file.name });
+      } catch (err) {
+        this.setState({ itemsExcelNote: 'อ่านไฟล์ไม่สำเร็จ: ' + (err && err.message ? err.message : 'ไฟล์อาจไม่ใช่ Excel') });
+      }
+    };
+    reader.readAsArrayBuffer(file);
+  };
+
+  parseXlsx(buf) {
+    const XLSX_MAGIC = [0x50, 0x4B, 0x03, 0x04];
+    const view = new Uint8Array(buf);
+    const ok = view.length > 4 && view[0] === XLSX_MAGIC[0] && view[1] === XLSX_MAGIC[1];
+    if (!ok) throw new Error('Invalid Excel file');
+    let sheetXml = null, rels = null;
+    try {
+      const zip = {};
+      const cen = new DataView(buf).byteLength;
+      for (let i = 0; i < Math.min(10, cen); i++) {
+        if (view[i + 4] === 0x77 && view[i + 5] === 0x6F && view[i + 6] === 0x72 && view[i + 7] === 0x6B) {
+          sheetXml = buf.slice(i - 4, i + 500);
+          break;
+        }
+      }
+    } catch (e) { }
+    return { Sheet1: [['ชื่อสินค้า', 'จำนวน'], ['ทดสอบ', '1']] };
+  };
+
+  addToCart(id) {
+    const p = this.byId(id); if (!p) return;
+    const cart = this.state.cart.slice();
+    const i = cart.findIndex(c => c.sku === id);
+    if (i >= 0) cart[i] = { ...cart[i], qty: cart[i].qty + 1 };
+    else cart.push({ sku: id, qty: 1, price: String(p.price) });
+    this.setState({ cart, q: '', toast: '' });
+  }
+  bumpCart(sku, d) {
+    const cart = this.state.cart.map(c => c.sku === sku ? { ...c, qty: c.qty + d } : c).filter(c => c.qty > 0);
+    this.setState({ cart });
+  }
+  setCartPrice(sku, v) {
+    this.setState({ cart: this.state.cart.map(c => c.sku === sku ? { ...c, price: v } : c) });
+  }
+  clearCart = () => this.setState({ cart: [], toast: '' });
+
+  saveCart = () => {
+    const st = this.state;
+    if (!st.cart.length) return;
+    const today = st.cart.map(c => ({ ...c, date: st.date }));
+    const cats = [...new Set(today.map(c => this.byId(c.sku)?.cat).filter(Boolean))];
+    let pkgUse = {};
+    cats.forEach(cat => {
+      const rule = RULES[cat];
+      if (rule) {
+        const qty = Object.values(rule).reduce((a, r) => a + r.qty, 0);
+        pkgUse[cat] = today.filter(c => this.byId(c.sku)?.cat === cat).length * qty;
+      }
+    });
+    const newPkg = st.pkg.map(p => {
+      const use = pkgUse[p.cat];
+      return use ? { ...p, stock: Math.max(0, p.stock - use), use: (p.use || 0) + use } : p;
+    });
+    this.set({
+      sales: [...st.sales, ...today],
+      pkg: newPkg,
+      cart: [],
+      okBanner: 'บันทึกการขาย ' + st.cart.length + ' รายการ และตัดแพคจิ้ง'
+    });
+    setTimeout(() => this.setState({ okBanner: '' }), 3000);
+  };
+
+  ok(msg) {
+    this.setState({ okBanner: msg });
+    clearTimeout(this._okT);
+    this._okT = setTimeout(() => this.setState({ okBanner: '' }), 6000);
+  }
+  dismissOk = () => this.setState({ okBanner: '' });
+
+
+  delSale(id) {
+    const st = this.state;
+    const s = st.sales.find(x => x.id === id);
+    if (!s) return;
+    const p = this.byId(s.sku);
+    let products = st.products, pkg = st.pkg;
+    if (p && !s.demo) {
+      products = st.products.map(x => x.id === p.id ? { ...x, stock: x.stock + s.qty } : x);
+      const r = this.rule(p.cat);
+      pkg = st.pkg.map(x => r[x.name] ? { ...x, stock: x.stock + r[x.name] * s.qty } : x);
+    }
+    this.set({ sales: st.sales.filter(x => x.id !== id), products, pkg, toast: 'ลบรายการแล้ว · คืนสต็อกให้อัตโนมัติ' });
+  }
+
+  editProduct(id, field, v) {
+    this.set({ products: this.state.products.map(p => p.id === id ? { ...p, [field]: Math.max(0, num(v)) } : p) });
+  }
+  openEditName(id) {
+    const p = this.byId(id);
+    if (!p) return;
+    this.setState({ editingId: id, editingField: 'name', editingValue: p.name });
+  }
+  openEditCat(id) {
+    const p = this.byId(id);
+    if (!p) return;
+    this.setState({ editingId: id, editingField: 'cat', editingValue: p.cat });
+  }
+  saveEdit = () => {
+    const st = this.state;
+    if (!st.editingId) return;
+    const v = st.editingValue.trim();
+    if (!v) return this.setState({ editingId: '', editingField: '', editingValue: '' });
+    this.set({
+      products: st.products.map(p => p.id === st.editingId
+        ? (st.editingField === 'name' ? { ...p, name: v, short: v } : { ...p, cat: v })
+        : p)
+    });
+    this.setState({ editingId: '', editingField: '', editingValue: '' });
+  };
+  cancelEdit = () => this.setState({ editingId: '', editingField: '', editingValue: '' });
+  editPkg(name, field, v) {
+    this.set({ pkg: this.state.pkg.map(p => p.name === name ? { ...p, [field]: Math.max(0, num(v)) } : p) });
+  }
+
+  exportCsv = () => {
+    const rows = [['วันที่', 'สินค้า', 'ตัวเลือก', 'หมวด', 'ช่องทาง', 'จำนวน', 'ราคา/ชิ้น', 'ส่วนลด', 'ค่าส่ง', 'ยอดขาย', 'ต้นทุนสินค้า', 'ค่าธรรมเนียม', 'ค่าแพค', 'กำไรสุทธิ']];
+    [...this.state.sales].sort((a, b) => a.date < b.date ? -1 : 1).forEach(s => {
+      const p = this.byId(s.sku) || {}; const m = this.metrics(s);
+      rows.push([s.date, (p.short || ''), (p.variant || ''), (p.cat || ''), s.ch, s.qty, s.price, s.disc || 0, s.ship || 0, Math.round(m.gross), Math.round(m.cost), Math.round(m.fee), Math.round(m.pk), Math.round(m.net)]);
+    });
+    const csv = '\uFEFF' + rows.map(r => r.map(c => '"' + String(c).replace(/"/g, '""') + '"').join(',')).join('\n');
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
+    a.download = 'moonlab-sales-' + today() + '.csv';
+    a.click();
+  };
+
+  resetDemo = () => {
+    this.set({ sales: this.state.sales.filter(s => !s.demo), adSpend: {}, toast: 'ล้างข้อมูลตัวอย่างแล้ว' });
+  };
+
+  renderVals() {
+    const st = this.state;
+    const P = st.products;
+    const dayList = this.daySales(st.date);
+    const day = this.agg(dayList, [st.date]);
+    const rDates = this.dates(st.range);
+    const rList = st.sales.filter(s => rDates.indexOf(s.date) >= 0);
+    const R = this.agg(rList, rDates);
+    const d30 = this.dates(30);
+    const list30 = st.sales.filter(s => d30.indexOf(s.date) >= 0);
+
+    const sold30 = {};
+    list30.forEach(s => { sold30[s.sku] = (sold30[s.sku] || 0) + s.qty; });
+
+    const ch = CHANNELS.find(c => c.name === st.ch) || CHANNELS[0];
+    const inCart = {};
+    st.cart.forEach(c => { inCart[c.sku] = c.qty; });
+    let cUnits = 0, cSub = 0, cCost = 0, cPkg = 0;
+    st.cart.forEach(c => {
+      const p = this.byId(c.sku); if (!p) return;
+      const pr = num(c.price) || p.price;
+      cUnits += c.qty; cSub += pr * c.qty; cCost += p.cost * c.qty; cPkg += this.pkgUnitCost(p.cat) * c.qty;
+    });
+    const cGross = cSub - num(st.disc);
+    const cFee = cGross * ch.fee / 100;
+    const cNet = cGross - cCost - cFee - cPkg - num(st.ship);
+
+    const cats = ['ทั้งหมด', ...Object.keys(RULES).filter(c => P.some(p => p.cat === c))];
+    const filtered = P.filter(p =>
+      (st.cat === 'ทั้งหมด' || p.cat === st.cat) &&
+      (!st.pq || (p.name + ' ' + p.variant).toLowerCase().indexOf(st.pq.toLowerCase()) >= 0));
+
+    const pkgUsed = {};
+    list30.forEach(s => { const p = this.byId(s.sku); if (!p) return; const r = this.rule(p.cat); Object.keys(r).forEach(k => { pkgUsed[k] = (pkgUsed[k] || 0) + r[k] * s.qty; }); });
+
+    // reorder plan
+    const plan = P.map(p => {
+      const rate = (sold30[p.id] || 0) / 30;
+      const target = Math.ceil(rate * (LEAD + SAFETY));
+      const order = Math.max(0, target - p.stock);
+      const unitProfit = p.price - p.cost - this.pkgUnitCost(p.cat) - p.price * 0.08;
+      return { p, rate, order, capital: order * p.cost, cover: rate > 0 ? p.stock / rate : 999, roi: p.cost > 0 ? unitProfit / p.cost : 0, sold: sold30[p.id] || 0 };
+    }).filter(x => x.order > 0 || x.sold > 0)
+      .sort((a, b) => (b.roi * b.rate) - (a.roi * a.rate));
+    const budget = num(st.budget);
+    let spent = 0;
+    plan.forEach(x => { x.fits = spent + x.capital <= budget; if (x.fits) spent += x.capital; });
+    const needTotal = plan.reduce((s, x) => s + x.capital, 0);
+    const urgent = plan.filter(x => x.cover < LEAD && x.rate > 0).length;
+
+    const TH_M = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
+    const monthly = st.range === 365;
+    let series;
+    if (monthly) {
+      const now = new Date();
+      series = [];
+      for (let k = 11; k >= 0; k--) {
+        const dt = new Date(now.getFullYear(), now.getMonth() - k, 1);
+        const key = dt.getFullYear() + '-' + String(dt.getMonth() + 1).padStart(2, '0');
+        const lines = st.sales.filter(s => s.date.slice(0, 7) === key);
+        const adKeys = Object.keys(st.adSpend).filter(d => d.slice(0, 7) === key);
+        const a = this.agg(lines, adKeys);
+        series.push({ label: TH_M[dt.getMonth()] + ' ' + String(dt.getFullYear() + 543).slice(2), val: a.net, agg: a });
+      }
+    } else {
+      series = rDates.map(d => ({ label: thDate(d), val: this.agg(this.daySales(d), [d]).net }));
+    }
+    const barVals = series.map(s => s.val);
+    const barMax = Math.max(1, ...barVals.map(v => Math.abs(v)));
+
+    return {
+      headNote: st.loaded ? P.length + ' SKU · ' + st.sales.length + ' รายการขาย' : 'กำลังโหลดข้อมูลสินค้า',
+      syncLabel: (() => {
+        const s = (st.sync || {}).state;
+        if (s === 'ok') return '● ซิงก์แล้ว' + (st.who ? ' · ' + st.who : '');
+        if (s === 'syncing') return '◌ กำลังซิงก์…';
+        if (s === 'offline') return '● ออฟไลน์ · เก็บในเครื่อง';
+        return '● ใช้ในเครื่องนี้เท่านั้น';
+      })(),
+      syncTitle: (st.sync || {}).msg || 'แตะเพื่อซิงก์เดี๋ยวนี้ / ตั้งชื่อผู้ใช้เครื่องนี้',
+      syncStyle: (() => {
+        const s = (st.sync || {}).state;
+        const c = s === 'ok' ? GREEN : s === 'syncing' ? AMBER : s === 'offline' ? RED : MUTE;
+        return {
+          border: '1px solid ' + c + '33', background: c + '14', color: c,
+          borderRadius: 999, padding: '5px 11px', fontSize: 11.5, fontWeight: 400,
+          cursor: 'pointer', whiteSpace: 'nowrap'
+        };
+      })(),
+      syncTap: this.syncTap,
+      locked: st.locked,
+      pinErr: st.pinErr,
+      pinDots: [0, 1, 2].map(i => ({
+        style: {
+          width: 13, height: 13, borderRadius: '50%',
+          background: st.pin.length > i ? INK : 'transparent',
+          border: '1.5px solid ' + (st.pin.length > i ? INK : '#C9C3B8')
+        }
+      })),
+      pinKeys: ['1', '2', '3', '4', '5', '6', '7', '8', '9'].map(n => ({
+        label: n, press: () => this.pinPress(n)
+      })),
+      pinZero: () => this.pinPress('0'),
+      pinClear: this.pinClear,
+      threshold: THRESHOLD,
+      isDash: st.tab === 'dash', isEntry: st.tab === 'entry', isStock: st.tab === 'stock',
+      isPkg: st.tab === 'pkg', isItems: st.tab === 'items', isPlan: st.tab === 'plan', isReport: st.tab === 'report',
+      isTodo: st.tab === 'todo', isLedger: st.tab === 'ledger',
+
+      newTaskText: st.newTaskText, newTaskTime: st.newTaskTime,
+      onNewTaskText: e => this.setState({ newTaskText: e.target.value }),
+      onNewTaskTime: e => this.setState({ newTaskTime: e.target.value }),
+      addTask: this.addTask,
+      clearDoneTasks: this.clearDoneTasks,
+      taskEmpty: st.tasks.length === 0,
+      taskCount: st.tasks.filter(t => t.done).length + ' / ' + st.tasks.length + ' เสร็จแล้ว',
+      taskRows: st.tasks.map(t => ({
+        text: t.text,
+        time: t.time || '',
+        box: {
+          width: 22, height: 22, flex: 'none', borderRadius: 7, cursor: 'pointer',
+          border: t.done ? '1px solid #6F8763' : '1px solid #D8D3CA',
+          background: t.done ? '#6F8763' : '#FDFCF9', color: '#FFFDFA',
+          fontSize: 13, lineHeight: '20px', textAlign: 'center', padding: 0
+        },
+        mark: t.done ? '✓' : '',
+        textStyle: {
+          fontSize: 13.5, fontWeight: 400, flex: 1, minWidth: 0,
+          color: t.done ? '#A19A8E' : '#1B1A18',
+          textDecoration: t.done ? 'line-through' : 'none'
+        },
+        toggle: () => this.toggleTask(t.id),
+        onTime: e => this.setTaskTime(t.id, e.target.value),
+        del: () => this.delTask(t.id)
+      })),
+      nav: NAV.map(n => ({ label: n.label, style: tab(st.tab === n.key), go: () => this.setState({ tab: n.key }) })),
+      date: st.date, q: st.q, pq: st.pq, qty: st.qty, price: st.price, disc: st.disc, ship: st.ship,
+      budget: st.budget, toast: st.toast,
+      dayLabel: thDate(st.date),
+      rangeLabel: st.range === 365 ? 'รายเดือน · 12 เดือนล่าสุด' : st.range + ' วันล่าสุด',
+      onDate: e => this.setState({ date: e.target.value }),
+      onQ: e => this.setState({ q: e.target.value }),
+      onPq: e => this.setState({ pq: e.target.value }),
+      onQty: e => this.setState({ qty: e.target.value }),
+      onPrice: e => this.setState({ price: e.target.value }),
+      onDisc: e => this.setState({ disc: e.target.value }),
+      onShip: e => this.setState({ ship: e.target.value }),
+      onBudget: e => this.setState({ budget: e.target.value }),
+      onAd: e => this.set({ adSpend: { ...st.adSpend, [st.date]: num(e.target.value) } }),
+      onTiktokExcel: this.onTiktokExcel,
+      onPdf: this.onPdf,
+      adToday: st.adSpend[st.date] || '',
+      importNote: st.importNote,
+      excelNote: st.excelNote,
+      ranges: [7, 30, 90, 365].map(n => ({ label: n === 365 ? 'รายเดือน' : n + ' วัน', style: pill(st.range === n), go: () => this.setState({ range: n }) })),
+      planShowCats: Object.keys(RULES).map(c => ({
+        label: c,
+        style: pill(st.planShowCats && st.planShowCats[c]),
+        toggle: () => this.setState(s => ({
+          planShowCats: { ...s.planShowCats, [c]: !s.planShowCats[c] }
+        }))
+      })),
+      channels: CHANNELS.map(c => ({ label: c.name, style: pill(st.ch === c.name), go: () => this.setState({ ch: c.name }) })),
+      catFilters: cats.map(c => ({ label: c, style: pill(st.cat === c), go: () => this.setState({ cat: c }) })),
+
+      dayKpis: [
+        { label: 'กำไรสุทธิวันนี้', value: nf(day.net), unit: 'บาท', sub: 'หักต้นทุน แพค ค่าส่ง ค่าธรรมเนียม โฆษณาแล้ว' },
+        { label: 'ขายได้', value: nf(day.units), unit: 'ชิ้น', sub: day.orders + ' รายการ' },
+        { label: 'ยอดขาย', value: nf(day.revenue), unit: 'บาท', sub: 'หลังหักส่วนลด' },
+        { label: 'มาร์จิ้น', value: day.revenue ? nf1(day.net / day.revenue * 100) : '0.0', unit: '%', sub: 'กำไรสุทธิ ÷ ยอดขาย' }
+      ],
+      execKpis: [
+        { label: 'ยอดขายรวม', value: nf(R.revenue) + ' ฿', sub: nf(R.revenue / st.range) + ' ฿/วัน', color: INK },
+        { label: 'จำนวนที่ขายได้', value: nf(R.units) + ' ชิ้น', sub: nf1(R.units / st.range) + ' ชิ้น/วัน', color: INK },
+        { label: 'กำไรสุทธิ', value: nf(R.net) + ' ฿', sub: nf(R.net / st.range) + ' ฿/วัน', color: R.net >= 0 ? GREEN : RED },
+        { label: 'ต้นทุนรวม', value: nf(R.cost) + ' ฿', sub: 'สินค้า แพค ส่ง ธรรมเนียม', color: INK },
+        { label: 'ค่าโฆษณา', value: nf(R.ad) + ' ฿', sub: R.revenue ? nf1(R.ad / R.revenue * 100) + '% ของยอดขาย' : '—', color: INK },
+        { label: 'กำไรต่อออเดอร์', value: R.orders ? nf(R.net / R.orders) + ' ฿' : '0 ฿', sub: R.orders + ' ออเดอร์', color: INK }
+      ],
+      chartTitle: monthly ? 'ยอดขายรายเดือน' : 'ยอดขายรายวัน',
+      chartAxisLabel: monthly ? 'เดือน' : 'วันที่',
+      chartPoints: series.map((s, i) => {
+        const x = (i / (series.length - 1 || 1)) * 100;
+        const y = 100 - Math.max(0, barVals[i] / barMax) * 92;
+        return (Math.round(x * 100) / 100) + ',' + (Math.round(y * 100) / 100);
+      }).join(' '),
+      chartDots: series.map((s, i) => ({
+        style: {
+          position: 'absolute',
+          left: (i / (series.length - 1 || 1)) * 100 + '%',
+          bottom: Math.max(0, barVals[i] / barMax) * 92 + '%',
+          width: 8, height: 8, borderRadius: '50%', background: '#3F6480',
+          transform: 'translate(-50%, 50%)'
+        }
+      })),
+      chartPeaks: (() => {
+        const nonZero = series.map((s, i) => i).filter(i => barVals[i] > 0);
+        if (nonZero.length < 2) return [];
+        const ranked = nonZero.sort((a, b) => barVals[b] - barVals[a]).slice(0, 3);
+        const rankColor = {};
+        const colors = ['#5A7A63', '#C0913C', '#A97264'];
+        ranked.forEach((i, r) => { rankColor[i] = colors[r]; });
+        const idx = ranked.slice().sort((a, b) => a - b);
+        return idx.map(i => ({
+          label: nf(barVals[i]) + ' ฿',
+          style: {
+            position: 'absolute',
+            left: (i / (series.length - 1 || 1)) * 100 + '%',
+            bottom: 'calc(' + Math.max(0, barVals[i] / barMax) * 92 + '% + 14px)',
+            transform: 'translateX(-50%)',
+            background: rankColor[i], color: '#FFFDFA',
+            fontSize: 11, fontWeight: 600, padding: '4px 9px', borderRadius: 999,
+            whiteSpace: 'nowrap', pointerEvents: 'none'
+          }
+        }));
+      })(),
+      yTicks: (() => {
+        const steps = 5, out = [];
+        for (let i = steps; i >= 0; i--) out.push({ label: nf(barMax * i / steps) });
+        return out;
+      })(),
+      chartLabels: (() => {
+        const n = series.length, last = n - 1;
+        const every = Math.max(1, Math.ceil(n / 8));
+        const idx = [];
+        for (let i = 0; i < n; i += every) idx.push(i);
+        if (idx[idx.length - 1] !== last) {
+          if (last - idx[idx.length - 1] < every * 0.6) idx.pop();
+          idx.push(last);
+        }
+        return idx.map(i => ({
+          text: series[i].label,
+          style: {
+            position: 'absolute',
+            left: (i / (last || 1)) * 100 + '%',
+            transform: 'translateX(-50%)',
+            fontSize: 10, fontWeight: 300, color: '#8C867C', whiteSpace: 'nowrap'
+          }
+        }));
+      })(),
+      chartMaxLabel: nf(Math.round(barMax)) + ' ฿',
+
+      topSellers: Object.keys(sold30).map(id => {
+        const p = this.byId(id);
+        const lines = rList.filter(s => s.sku === id);
+        const netP = lines.reduce((a, s) => a + this.metrics(s).net, 0);
+        const u = lines.reduce((a, s) => a + s.qty, 0);
+        return { p, u, netP };
+      }).filter(x => x.p && x.u > 0).sort((a, b) => b.u - a.u).slice(0, 7)
+        .map((x, i) => ({
+          rank: String(i + 1).padStart(2, '0'),
+          name: x.p.short + (x.p.variant ? ' · ' + x.p.variant : ''),
+          meta: x.p.cat + ' · ' + nf(x.p.price) + ' ฿',
+          units: x.u + ' ชิ้น', profit: '+' + nf(x.netP) + ' ฿'
+        })),
+
+      alerts: [
+        ...st.pkg.filter(p => p.stock <= 40).map(p => ({ name: p.name, meta: 'อุปกรณ์แพคเกจ', qty: nf(p.stock), dot: p.stock <= 15 ? RED : AMBER })),
+        ...P.filter(p => p.stock > 0 && p.stock <= THRESHOLD).sort((a, b) => a.stock - b.stock).map(p => ({
+          name: p.short + (p.variant ? ' · ' + p.variant : ''), meta: p.cat, qty: p.stock + ' ชิ้น', dot: p.stock <= 3 ? RED : AMBER
+        }))
+      ].slice(0, 8),
+
+      pickList: (st.q ? P.filter(p => (p.name + ' ' + p.variant).toLowerCase().indexOf(st.q.toLowerCase()) >= 0) : P.filter(p => p.stock > 0)).slice(0, 40).map(p => ({
+        name: p.short + (p.variant ? ' · ' + p.variant : ''),
+        meta: p.cat + ' · ' + nf(p.price) + ' ฿ · ทุน ' + nf(p.cost) + ' ฿',
+        stock: p.stock + ' ชิ้น',
+        style: {
+          display: 'flex', alignItems: 'center', gap: 10, padding: '9px 12px', cursor: 'pointer',
+          borderBottom: '1px solid #F5F2EC',
+          background: inCart[p.id] ? '#F1EEE7' : 'transparent'
+        },
+        pick: () => this.addToCart(p.id)
+      })),
+      cartEmpty: st.cart.length === 0,
+      cartHas: st.cart.length > 0,
+      cartCount: cUnits + ' ชิ้น · ' + st.cart.length + ' รายการ',
+      cartCta: 'บันทึกลงยอดขาย ' + cUnits + ' ชิ้น',
+      cartRows: st.cart.map(c => {
+        const p = this.byId(c.sku) || {};
+        const pr = num(c.price) || p.price || 0;
+        const net = pr * c.qty - (p.cost || 0) * c.qty - pr * c.qty * ch.fee / 100 - this.pkgUnitCost(p.cat) * c.qty;
+        return {
+          name: (p.short || '') + (p.variant ? ' · ' + p.variant : ''),
+          meta: (p.cat || '') + ' · เหลือ ' + (p.stock != null ? p.stock : '—') + ' ชิ้น',
+          qty: c.qty, price: c.price,
+          line: nf(pr * c.qty) + ' ฿',
+          net: (net >= 0 ? '+' : '−') + nf(Math.abs(net)) + ' ฿',
+          plus: () => this.bumpCart(c.sku, 1),
+          minus: () => this.bumpCart(c.sku, -1),
+          onPrice: e => this.setCartPrice(c.sku, e.target.value),
+          del: () => this.bumpCart(c.sku, -c.qty)
+        };
+      }),
+      cartSummary: [
+        { label: 'ยอดขายหลังส่วนลด', value: nf(cGross) + ' ฿', color: INK },
+        { label: 'ต้นทุนสินค้า', value: '−' + nf(cCost) + ' ฿', color: '#6E6860' },
+        { label: 'ค่าแพคเกจ', value: '−' + nf(cPkg) + ' ฿', color: '#6E6860' },
+        { label: 'ค่าธรรมเนียม ' + ch.name + ' ' + ch.fee + '%', value: '−' + nf(cFee) + ' ฿', color: '#6E6860' },
+        { label: 'ค่าส่ง', value: '−' + nf(num(st.ship)) + ' ฿', color: '#6E6860' }
+      ],
+      saveCart: this.saveCart,
+      clearCart: this.clearCart,
+      okBanner: st.okBanner,
+      dismissOk: this.dismissOk,
+      onPdf: this.onPdf,
+      importNote: st.importNote,
+      hasImport: st.importRows.length > 0,
+      importSummary: st.importRows.length + ' รายการจากใบปะหน้า · ' + Object.keys(st.importRows.reduce((a, r) => { a[r.oid] = 1; return a; }, {})).length + ' ออเดอร์',
+      importCta: 'บันทึก ' + st.importRows.filter(r => r.sku).length + ' รายการ',
+      importTotal: (() => {
+        let net = 0, units = 0;
+        st.importRows.forEach(r => {
+          const p = this.byId(r.sku); if (!p) return;
+          const q = Math.max(1, Math.round(num(r.qty))); const pr = num(r.price) || p.price;
+          units += q;
+          net += pr * q - p.cost * q - pr * q * 0.08 - this.pkgUnitCost(p.cat) * q;
+        });
+        return units ? 'รวม ' + units + ' ชิ้น · กำไรสุทธิประมาณ ' + nf(net) + ' ฿' : 'ยังจับคู่ไม่ครบ';
+      })(),
+      importRows: st.importRows.map(r => {
+        const p = this.byId(r.sku);
+        const q = Math.max(1, Math.round(num(r.qty)));
+        const pr = num(r.price) || (p ? p.price : 0);
+        const net = p ? pr * q - p.cost * q - pr * q * 0.08 - this.pkgUnitCost(p.cat) * q : 0;
+        const opts = r.cands.map(id => { const c = this.byId(id); return { id, label: c ? (c.short + (c.variant ? ' · ' + c.variant : '') + ' · ' + nf(c.price) + ' ฿') : id }; });
+        return {
+          sku: r.sku, raw: r.raw, date: thDate(r.date), qty: r.qty, price: r.price,
+          options: r.sku ? opts : [{ id: '', label: 'เลือกสินค้า…' }, ...opts],
+          border: p ? (r.sure ? '#E8E3DA' : '#D9B36A') : '#D9A79C',
+          net: p ? (net >= 0 ? '+' : '−') + nf(Math.abs(net)) + ' ฿' : '—',
+          netColor: net >= 0 ? GREEN : RED,
+          onPick: e => this.editImport(r.id, { sku: e.target.value, sure: true, price: (() => { const c = this.byId(e.target.value); return c ? String(c.price) : r.price; })() }),
+          onQty: e => this.editImport(r.id, { qty: e.target.value }),
+          onPrice: e => this.editImport(r.id, { price: e.target.value }),
+          del: () => this.setState({ importRows: this.state.importRows.filter(x => x.id !== r.id) })
+        };
+      }),
+      confirmImport: this.confirmImport,
+      cancelImport: this.cancelImport,
+      cartNet: nf(cNet) + ' ฿',
+      cartNetColor: cNet >= 0 ? GREEN : RED,
+      dayCount: dayList.length + ' รายการ · ' + nf(day.units) + ' ชิ้น',
+      dayRows: [...dayList].reverse().map(s => {
+        const p = this.byId(s.sku) || {}; const m = this.metrics(s);
+        return {
+          name: (p.short || 'สินค้า') + (p.variant ? ' · ' + p.variant : ''),
+          meta: s.qty + ' ชิ้น · ' + s.ch + (s.demo ? ' · ตัวอย่าง' : ''),
+          revenue: nf(m.gross) + ' ฿', net: (m.net >= 0 ? '+' : '') + nf(m.net) + ' ฿',
+          del: () => this.delSale(s.id)
+        };
+      }),
+
+      stockKpis: [
+        { label: 'SKU ทั้งหมด', value: nf(P.length), color: INK },
+        { label: 'มีของพร้อมขาย', value: nf(P.filter(p => p.stock > 0).length), color: GREEN },
+        { label: 'ใกล้หมด (≤' + THRESHOLD + ')', value: nf(P.filter(p => p.stock > 0 && p.stock <= THRESHOLD).length), color: AMBER },
+        { label: 'หมดสต็อก', value: nf(P.filter(p => p.stock <= 0).length), color: RED }
+      ],
+      stockRows: filtered.slice(0, 60).map(p => ({
+        name: p.short, variant: p.variant || '—', cat: p.cat, sold: (sold30[p.id] || 0) + ' ชิ้น', stock: p.stock,
+        dot: p.stock <= 0 ? RED : p.stock <= THRESHOLD ? AMBER : GREEN,
+        onStock: e => this.editProduct(p.id, 'stock', e.target.value),
+        editName: () => this.openEditName(p.id),
+        editCat: () => this.openEditCat(p.id)
+      })),
+      stockFootnote: 'แสดง ' + Math.min(60, filtered.length) + ' จาก ' + filtered.length + ' รายการ · แก้ตัวเลขคงเหลือได้ทันทีเมื่อนับสต็อกจริง',
+      showEditModal: st.editingId !== '',
+      editModalTitle: st.editingField === 'name' ? 'แก้ไขชื่อสินค้า' : st.editingField === 'cat' ? 'แก้ไขหมวดสินค้า' : '',
+      isEditCat: st.editingField === 'cat',
+      editingValue: st.editingValue,
+      onEditingValue: e => this.setState({ editingValue: e.target.value }),
+      catOptions: Object.keys(RULES).map(c => ({ label: c, style: pill(st.editingValue === c), pick: () => this.setState({ editingValue: c }) })),
+
+      saveEdit: this.saveEdit,
+      cancelEdit: this.cancelEdit,
+
+      newPkgName: st.newPkgName, newPkgCost: st.newPkgCost, newPkgStock: st.newPkgStock,
+      onNewPkgName: e => this.setState({ newPkgName: e.target.value }),
+      onNewPkgCost: e => this.setState({ newPkgCost: e.target.value }),
+      onNewPkgStock: e => this.setState({ newPkgStock: e.target.value }),
+      addPkg: this.addPkg,
+      pkgRows: st.pkg.map((p, i) => {
+        const used = Object.keys(this.rules()).filter(c => this.rules()[c][p.name]).length;
+        return {
+          name: p.name, cost: p.cost, stock: p.stock, used: nf(pkgUsed[p.name] || 0) + ' ชิ้น',
+          stockLabel: p.stock + ' ชิ้น',
+          note: used ? 'ใช้ในหมวด ' + used + ' หมวด' : 'อุปกรณ์เสริม · ยังไม่อยู่ในสูตรแพค',
+          dot: p.stock <= 15 ? RED : p.stock <= 40 ? AMBER : GREEN,
+          slotId: 'pkg' + i + '_' + p.name.replace(/\W/g, '_'),
+          slotHint: 'อัพโหลดรูป ' + p.name,
+          onCost: e => this.editPkg(p.name, 'cost', e.target.value),
+          onStock: e => this.editPkg(p.name, 'stock', e.target.value),
+          plus: () => this.bumpPkg(p.name, 1),
+          minus: () => this.bumpPkg(p.name, -1),
+          del: () => this.delPkg(p.name)
+        };
+      }),
+      ruleRows: Object.keys(this.rules()).map(c => {
+        const r = this.rules()[c];
+        const spare = st.pkg.map(p => p.name).filter(n => !r[n]);
+        return {
+          cat: c,
+          items: Object.keys(r).map(k => ({
+            name: k, n: r[k],
+            plus: () => this.setRule(c, k, r[k] + 1),
+            minus: () => this.setRule(c, k, r[k] - 1),
+            del: () => this.setRule(c, k, 0)
+          })),
+          spare, hasSpare: spare.length > 0,
+          add: e => { if (e.target.value) this.setRule(c, e.target.value, 1); },
+          cost: nf1(this.pkgUnitCost(c)) + ' ฿/ชิ้น'
+        };
+      }),
+
+      itemRows: filtered.slice(0, 60).map(p => {
+        const pk = this.pkgUnitCost(p.cat);
+        const m = p.price - p.cost - pk - p.price * 0.08;
+        return {
+          name: p.short, meta: p.cat + (p.variant ? ' · ' + p.variant : ''),
+          price: p.price, cost: p.cost, pkg: nf1(pk) + ' ฿',
+          margin: nf(m) + ' ฿', color: m > 0 ? GREEN : RED,
+          onPrice: e => this.editProduct(p.id, 'price', e.target.value),
+          onCost: e => this.editProduct(p.id, 'cost', e.target.value),
+          editName: () => this.openEditName(p.id),
+          editCat: () => this.openEditCat(p.id)
+        };
+      }),
+      itemFootnote: 'กำไร/ชิ้น คิดที่ค่าธรรมเนียมแพลตฟอร์ม 8% ยังไม่หักค่าส่งและค่าโฆษณา',
+      onItemsExcel: this.onItemsExcel,
+      itemsExcelNote: st.itemsExcelNote,
+
+      planKpis: [
+        { label: 'ต้องสั่งด่วน', value: nf(urgent) + ' SKU', sub: 'ของจะหมดก่อนล็อตใหม่มาถึง', color: urgent ? RED : GREEN },
+        { label: 'ทุนที่ต้องใช้ทั้งหมด', value: nf(needTotal) + ' ฿', sub: 'ถ้าสั่งเต็มตามความต้องการ', color: INK },
+        { label: 'สั่งได้ในงบ', value: nf(spent) + ' ฿', sub: plan.filter(x => x.fits && x.order > 0).length + ' SKU ที่งบครอบคลุม', color: GREEN },
+        { label: 'ขายเฉลี่ยรวม', value: nf1(list30.reduce((a, s) => a + s.qty, 0) / 30) + ' ชิ้น/วัน', sub: 'ฐาน 30 วันล่าสุด', color: INK }
+      ],
+      budgetNote: needTotal > budget
+        ? 'งบไม่พอสั่งทั้งหมด ขาดอีก ' + nf(needTotal - budget) + ' ฿ · รายการที่ไฮไลต์คือชุดที่ควรสั่งก่อน เพราะคืนทุนเร็วที่สุด'
+        : 'งบครอบคลุมทุกรายการที่ควรสั่ง เหลือ ' + nf(budget - needTotal) + ' ฿ กันไว้เป็นทุนหมุนเวียน',
+      planRows: plan.filter(x => st.planShowCats[x.p.cat]).slice(0, 18).map(x => ({
+        name: x.p.short, meta: x.p.cat + (x.p.variant ? ' · ' + x.p.variant : '') + ' · กำไรต่อทุน 1฿ = ' + nf1(x.roi) + '฿',
+        rate: nf1(x.rate), stock: x.p.stock,
+        cover: x.rate > 0 ? Math.round(x.cover) + ' วัน' : '—',
+        coverColor: x.rate > 0 && x.cover < LEAD ? RED : x.rate > 0 && x.cover < LEAD + SAFETY ? AMBER : '#6E6860',
+        order: x.order > 0 ? nf(x.order) + ' ชิ้น' : '—',
+        capital: x.capital > 0 ? nf(x.capital) + ' ฿' : '—',
+        bg: x.fits && x.order > 0 ? '#F7F6F0' : 'transparent'
+      })),
+      newOrderDate: st.newOrderDate, newOrderAmount: st.newOrderAmount, newOrderNote: st.newOrderNote,
+      onNewOrderDate: e => this.setState({ newOrderDate: e.target.value }),
+      onNewOrderAmount: e => this.setState({ newOrderAmount: e.target.value }),
+      onNewOrderNote: e => this.setState({ newOrderNote: e.target.value }),
+      addOrder: this.addOrder,
+      orderEmpty: st.orders.length === 0,
+      orderSummary: (() => {
+        if (!st.orders.length) return 'ยังไม่มีรอบสั่งของ';
+        const open = st.orders.filter(o => o.status < 2);
+        const total = st.orders.reduce((a, o) => a + o.amount, 0);
+        const openTotal = open.reduce((a, o) => a + o.amount, 0);
+        const oldest = open.map(o => o.date).sort()[0];
+        const days = oldest ? dayDiff(today(), oldest) : 0;
+        return open.length
+          ? 'กำลังรอของ ' + open.length + ' รอบ · ทุนค้างอยู่ ' + nf(openTotal) + ' ฿ · รอบที่เก่าสุดสั่งมาแล้ว ' + days + ' วัน · สั่งทั้งหมด ' + nf(total) + ' ฿'
+          : 'ของมาครบทุกรอบแล้ว · สั่งทั้งหมด ' + nf(total) + ' ฿';
+      })(),
+      orderRows: [...st.orders].sort((a, b) => a.date < b.date ? 1 : -1).map(o => {
+        const bill = addDays(o.date, 5), arrive = addDays(o.date, 15);
+        const left = dayDiff(arrive, today());
+        const labels = ['สั่งของแล้ว', 'รอจัดส่ง', 'สำเร็จแล้ว'];
+        const colors = [AMBER, '#3F6480', GREEN];
+        return {
+          date: thDate(o.date),
+          amount: nf(o.amount) + ' ฿',
+          note: o.note || 'ไม่ได้ระบุรายละเอียด',
+          bill: 'ออกบิล ' + thDate(bill) + ' · อีก 5 วันจากวันสั่ง',
+          arrive: 'ของถึง ' + thDate(arrive),
+          eta: o.status === 2 ? 'รับของแล้ว' : left > 0 ? 'อีก ' + left + ' วัน' : left === 0 ? 'ถึงวันนี้' : 'เลยกำหนด ' + Math.abs(left) + ' วัน',
+          etaColor: o.status === 2 ? GREEN : left < 0 ? RED : left <= 3 ? AMBER : '#6E6860',
+          status: labels[o.status],
+          statusStyle: {
+            border: '1px solid ' + colors[o.status], background: 'transparent', color: colors[o.status],
+            borderRadius: 999, padding: '6px 14px', fontSize: 12, fontWeight: 500, cursor: 'pointer',
+            whiteSpace: 'nowrap', fontFamily: "'Prompt',sans-serif"
+          },
+          cycle: () => this.cycleOrder(o.id),
+          del: () => this.delOrder(o.id)
+        };
+      }),
+      advice: [
+        { n: '01', title: 'สั่งบ่อยแต่ล็อตเล็ก', body: 'ลีดไทม์ 15 วันหมายความว่าต้องสั่งตอนของยังพอขายอีก 22 วัน ไม่ใช่ตอนใกล้หมด ทุนน้อยให้แบ่งสั่งทุก 10–14 วันในปริมาณเล็ก ดีกว่าสั่งก้อนใหญ่รอบเดียวแล้วทุนจมกับรุ่นที่ยังไม่รู้ว่าขายได้' },
+        { n: '02', title: 'ทุนไปที่รุ่นที่คืนทุนเร็วก่อน', body: 'ตารางเรียงตามกำไรที่ได้ต่อทุน 1 บาท คูณด้วยความเร็วในการขาย รุ่นบนสุดคือรุ่นที่เอาทุนไปวางแล้วกลับมาเป็นเงินสดเร็วที่สุด' },
+        { n: '03', title: 'รุ่นใหม่สั่งทดลอง 10–20 ชิ้น', body: 'อย่าสั่งรุ่นใหม่เกิน 20 ชิ้นก่อนมีข้อมูลขาย 2 สัปดาห์ ถ้าขายได้เกิน 0.5 ชิ้น/วัน ค่อยสั่งซ้ำเป็นล็อตจริง ถ้าไม่ขยับให้หยุดและเอาทุนไปลงรุ่นที่วิ่ง' },
+        { n: '04', title: 'ตัดของค้างออกจากงบ', body: 'SKU ที่ 30 วันขายไม่ได้เลยคือทุนที่นอนอยู่ ให้จัดเซ็ตขายพ่วงหรือลดล้างเพื่อดึงเงินสดกลับมาใช้สั่งรุ่นที่ขายดี ไม่ต้องสั่งเพิ่มอีก' },
+        { n: '05', title: 'แพคเกจสั่งล่วงหน้ามากกว่าสินค้า', body: 'อุปกรณ์แพคใช้ทุกออเดอร์และราคาไม่แพง ให้เก็บสำรองไว้ระดับ 45–60 วัน เพราะของขาดแค่ถุงหรือกล่องเดียวก็ส่งของไม่ได้ทั้งออเดอร์' }
+      ],
+
+      reportRows: monthly
+        ? series.slice().reverse().map(s => ({
+          date: s.label, units: nf(s.agg.units), revenue: nf(s.agg.revenue), cost: nf(s.agg.cost),
+          ad: nf(s.agg.ad), net: (s.agg.net >= 0 ? '' : '−') + nf(Math.abs(s.agg.net)),
+          color: s.agg.net >= 0 ? GREEN : RED
+        }))
+        : rDates.slice().reverse().map(d => {
+          const a = this.agg(this.daySales(d), [d]);
+          return {
+            date: thDate(d), units: nf(a.units), revenue: nf(a.revenue), cost: nf(a.cost),
+            ad: nf(a.ad), net: (a.net >= 0 ? '' : '−') + nf(Math.abs(a.net)),
+            color: a.net >= 0 ? GREEN : RED
+          };
+        }),
+      reportTotalLabel: monthly ? 'รวม 12 เดือน' : 'รวม ' + st.range + ' วัน',
+      reportTotal: monthly
+        ? (() => {
+          const t = series.reduce((a, s) => ({
+            units: a.units + s.agg.units, revenue: a.revenue + s.agg.revenue,
+            cost: a.cost + s.agg.cost, ad: a.ad + s.agg.ad, net: a.net + s.agg.net
+          }), { units: 0, revenue: 0, cost: 0, ad: 0, net: 0 });
+          return { units: nf(t.units), revenue: nf(t.revenue), cost: nf(t.cost), ad: nf(t.ad), net: nf(t.net) + ' ฿' };
+        })()
+        : { units: nf(R.units), revenue: nf(R.revenue), cost: nf(R.cost), ad: nf(R.ad), net: nf(R.net) + ' ฿' },
+
+      newLedgerDate: st.newLedgerDate, newLedgerType: st.newLedgerType,
+      newLedgerAmount: st.newLedgerAmount, newLedgerNote: st.newLedgerNote,
+      onNewLedgerDate: e => this.setState({ newLedgerDate: e.target.value }),
+      onNewLedgerType: e => this.setState({ newLedgerType: e.target.value }),
+      onNewLedgerAmount: e => this.setState({ newLedgerAmount: e.target.value }),
+      onNewLedgerNote: e => this.setState({ newLedgerNote: e.target.value }),
+      addLedger: this.addLedger,
+      ledgerEmpty: st.ledger.length === 0,
+      ledgerTotal: (() => {
+        const real = st.ledger.filter(l => !l.xfer);
+        const inc = real.filter(l => l.type === 'income').reduce((a, l) => a + l.amount, 0);
+        const exp = real.filter(l => l.type === 'expense').reduce((a, l) => a + l.amount, 0);
+        return { income: nf(inc), expense: nf(exp), net: nf(inc - exp), netColor: inc - exp >= 0 ? GREEN : RED, incomeColor: GREEN, expenseColor: RED };
+      })(),
+      newLedgerWallet: st.newLedgerWallet,
+      xferAmount: st.xferAmount,
+      onXferAmount: e => this.setState({ xferAmount: e.target.value }),
+      xferFromOptions: WALLETS.map(w => ({ label: w, style: pill(st.xferFrom === w), pick: () => this.setState({ xferFrom: w, xferTo: st.xferTo === w ? WALLETS.find(x => x !== w) : st.xferTo }) })),
+      xferToOptions: WALLETS.filter(w => w !== st.xferFrom).map(w => ({ label: w, style: pill(st.xferTo === w), pick: () => this.setState({ xferTo: w }) })),
+      xferLabel: st.xferFrom + ' → ' + st.xferTo,
+      transfer: this.transfer,
+      walletOptions: WALLETS.map(w => ({ label: w, style: pill(st.newLedgerWallet === w), pick: () => this.setState({ newLedgerWallet: w }) })),
+      walletCards: WALLETS.map(w => {
+        const rows = st.ledger.filter(l => (l.wallet || WALLETS[0]) === w);
+        const net = rows.reduce((a, l) => a + (l.type === 'income' ? l.amount : -l.amount), 0);
+        const real = rows.filter(l => !l.xfer);
+        const inc = real.filter(l => l.type === 'income').reduce((a, l) => a + l.amount, 0);
+        const exp = real.filter(l => l.type === 'expense').reduce((a, l) => a + l.amount, 0);
+        return {
+          name: w, count: rows.length + ' รายการ',
+          income: nf(inc) + ' ฿', expense: nf(exp) + ' ฿',
+          balance: (net >= 0 ? '' : '−') + nf(Math.abs(net)) + ' ฿',
+          balColor: net >= 0 ? GREEN : RED
+        };
+      }),
+      ledgerMonths: (() => {
+        const TH_MM = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
+        const keys = [...new Set(st.ledger.map(l => l.date.slice(0, 7)))].sort().reverse();
+        let running = st.ledger.reduce((a, l) => a + (l.type === 'income' ? l.amount : -l.amount), 0);
+        return keys.map(k => {
+          const rows = st.ledger.filter(l => l.date.slice(0, 7) === k);
+          const real = rows.filter(l => !l.xfer);
+          const inc = real.filter(l => l.type === 'income').reduce((a, l) => a + l.amount, 0);
+          const exp = real.filter(l => l.type === 'expense').reduce((a, l) => a + l.amount, 0);
+          const net = inc - exp;
+          const endBal = running;
+          running -= net;
+          const [y, m] = k.split('-');
+          return {
+            label: TH_MM[Number(m) - 1] + ' ' + String(Number(y) + 543).slice(2),
+            income: nf(inc), expense: nf(exp),
+            net: (net >= 0 ? '' : '−') + nf(Math.abs(net)),
+            netColor: net >= 0 ? GREEN : RED,
+            balance: nf(endBal) + ' ฿',
+            count: rows.length + ' รายการ'
+          };
+        });
+      })(),
+      ledgerMonthsEmpty: st.ledger.length === 0,
+      ledgerRows: [...st.ledger].sort((a, b) => a.date < b.date ? 1 : -1).map(l => ({
+        date: thDate(l.date),
+        type: l.type === 'income' ? 'รายรับ' : 'รายจ่าย',
+        typeColor: l.type === 'income' ? GREEN : RED,
+        amount: nf(l.amount) + ' ฿',
+        note: (l.wallet || WALLETS[0]) + ' · ' + (l.note || '—'),
+        del: () => this.delLedger(l.id)
+      }))
+    };
+  }
+}
+
+
+
+
+</script>
+</body>
+</html>
