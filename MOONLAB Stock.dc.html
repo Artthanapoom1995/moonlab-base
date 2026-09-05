@@ -1559,25 +1559,46 @@ class Component extends DCLogic {
   saveCart = () => {
     const st = this.state;
     if (!st.cart.length) return;
-    const today = st.cart.map(c => ({ ...c, date: st.date }));
-    const cats = [...new Set(today.map(c => this.byId(c.sku)?.cat).filter(Boolean))];
-    let pkgUse = {};
-    cats.forEach(cat => {
-      const rule = RULES[cat];
-      if (rule) {
-        const qty = Object.values(rule).reduce((a, r) => a + r.qty, 0);
-        pkgUse[cat] = today.filter(c => this.byId(c.sku)?.cat === cat).length * qty;
-      }
+    const ch = CHANNELS.find(c => c.name === st.ch) || CHANNELS[0];
+    const stamp = Date.now();
+
+    const lines = st.cart.map(c => {
+      const p = this.byId(c.sku);
+      const price = num(c.price) || (p ? p.price : 0);
+      return { c, p, price, sub: price * c.qty };
+    }).filter(l => l.p);
+    if (!lines.length) return;
+
+    /* ส่วนลดกับค่าส่งกรอกครั้งเดียวต่อบิล จึงเฉลี่ยลงแต่ละรายการตามสัดส่วนยอดขาย
+       รายการสุดท้ายรับเศษที่เหลือ เพื่อให้ผลรวมเท่ากับที่กรอกเป๊ะๆ ไม่คลาดจากการปัดเศษ */
+    const subTotal = lines.reduce((a, l) => a + l.sub, 0);
+    const disc = num(st.disc), ship = num(st.ship);
+    let usedDisc = 0, usedShip = 0;
+
+    let products = st.products, pkg = st.pkg;
+    const sales = [];
+
+    lines.forEach((l, i) => {
+      const last = i === lines.length - 1;
+      const share = subTotal > 0 ? l.sub / subTotal : 1 / lines.length;
+      const d = last ? disc - usedDisc : Math.round(disc * share);
+      const sh = last ? ship - usedShip : Math.round(ship * share);
+      usedDisc += d; usedShip += sh;
+
+      sales.push({
+        id: 's' + stamp + '_' + i, date: st.date, sku: l.p.id, qty: l.c.qty,
+        price: l.price, disc: d, ship: sh, ch: ch.name, fee: ch.fee
+      });
+
+      products = products.map(x => x.id === l.p.id ? { ...x, stock: x.stock - l.c.qty } : x);
+      const rule = this.rule(l.p.cat);
+      pkg = pkg.map(x => rule[x.name] ? { ...x, stock: x.stock - rule[x.name] * l.c.qty } : x);
     });
-    const newPkg = st.pkg.map(p => {
-      const use = pkgUse[p.cat];
-      return use ? { ...p, stock: Math.max(0, p.stock - use), use: (p.use || 0) + use } : p;
-    });
+
     this.set({
-      sales: [...st.sales, ...today],
-      pkg: newPkg,
-      cart: [],
-      okBanner: 'บันทึกการขาย ' + st.cart.length + ' รายการ และตัดแพคจิ้ง'
+      sales: [...st.sales, ...sales],
+      products, pkg, cart: [], disc: '', ship: '',
+      okBanner: 'บันทึกการขาย ' + sales.length + ' รายการ · ตัดสต็อกสินค้าและแพคเกจแล้ว'
     });
     setTimeout(() => this.setState({ okBanner: '' }), 3000);
   };
