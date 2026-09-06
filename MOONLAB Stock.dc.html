@@ -508,6 +508,13 @@
           <button onClick="{{ addProduct }}" style="border:none;background:#1B1A18;color:#F6F4F0;border-radius:10px;padding:10px 18px;font-size:13px;font-weight:500;cursor:pointer;flex:none;white-space:nowrap" style-hover="background:#332F2A">+ เพิ่มสินค้า</button>
         </div>
 
+        <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px;align-items:center">
+          <span style="font-size:11.5px;font-weight:400;color:#9A9388;letter-spacing:0.04em;flex:none">เรียงตาม</span>
+          <sc-for list="{{ sortFilters }}" as="s" hint-placeholder-count="3">
+            <button onClick="{{ s.go }}" style="{{ s.style }}">{{ s.label }}</button>
+          </sc-for>
+        </div>
+
         <div style="background:#FFFDFA;border:1px solid #EBE7DF;border-radius:16px;overflow-x:auto">
           <div style="display:grid;grid-template-columns:44px minmax(160px,1fr) 104px 104px 84px 86px 86px 74px 88px 72px;min-width:1030px;gap:10px;padding:13px clamp(14px,3vw,22px);background:#FBF9F5;border-bottom:1px solid #EFEBE3;font-size:11px;font-weight:400;color:#9A9388;letter-spacing:0.06em">
             <span style="text-align:center">#</span><span>สินค้า</span><span>หมวด</span><span style="text-align:right">คงเหลือ</span><span style="text-align:right">ขาย 30 วัน</span><span style="text-align:right">ราคาขาย</span><span style="text-align:right">ต้นทุน</span><span style="text-align:right">ค่าแพค</span><span style="text-align:right">กำไร/ชิ้น</span><span></span>
@@ -1190,7 +1197,7 @@ function tab(active) {
 class Component extends DCLogic {
   state = {
     tab: 'dash', loaded: false, products: [], sales: [], pkg: [], adSpend: {}, rules: RULES,
-    date: today(), q: '', pq: '', cat: 'ทั้งหมด', selId: '',
+    date: today(), q: '', pq: '', cat: 'ทั้งหมด', sort: 'default', selId: '',
     qty: '1', price: '', disc: '', ship: '', ch: 'TikTok Shop',
     range: 7, budget: '20000', toast: '',
     newPkgName: '', newPkgCost: '', newPkgStock: '',
@@ -2264,6 +2271,9 @@ class Component extends DCLogic {
     const filtered = P.filter(p =>
       (st.cat === 'ทั้งหมด' || p.cat === st.cat) &&
       (!st.pq || (p.name + ' ' + p.variant).toLowerCase().indexOf(st.pq.toLowerCase()) >= 0));
+    /* เรียงลำดับที่ร้านเลือกเอง — localeCompare('th') เพื่อให้ ก-ฮ เรียงตามพจนานุกรมไทย ไม่ใช่ตามรหัสตัวอักษร */
+    if (st.sort === 'name') filtered.sort((a, b) => String(a.short || a.name).localeCompare(String(b.short || b.name), 'th'));
+    else if (st.sort === 'stock') filtered.sort((a, b) => b.stock - a.stock);
 
     const pkgUsed = {};
     list30.forEach(s => { const p = this.byId(s.sku); if (!p) return; const r = this.rule(p.cat); Object.keys(r).forEach(k => { pkgUsed[k] = (pkgUsed[k] || 0) + r[k] * s.qty; }); });
@@ -2406,6 +2416,11 @@ class Component extends DCLogic {
       onFee: e => this.setFee(ch.name, e.target.value),
       feeNote: 'ปรับได้เมื่อแพลตฟอร์มเปลี่ยนอัตรา · ยอดขายที่บันทึกไปแล้วยังใช้ % เดิมของวันนั้น · เว้นว่างเพื่อกลับไปใช้ค่าตั้งต้น ' + ((CHANNELS.find(c => c.name === ch.name) || {}).fee || 0) + '%',
       catFilters: cats.map(c => ({ label: c, style: pill(st.cat === c), go: () => this.setState({ cat: c }) })),
+      sortFilters: [
+        { key: 'default', label: 'ลำดับเดิม' },
+        { key: 'name', label: 'ชื่อ ก–ฮ' },
+        { key: 'stock', label: 'สต็อกมาก→น้อย' }
+      ].map(s => ({ label: s.label, style: pill(st.sort === s.key), go: () => this.setState({ sort: s.key }) })),
 
       dayKpis: [
         { label: 'กำไรสุทธิวันนี้', value: nf(day.net), unit: 'บาท', sub: 'หักต้นทุน แพค ค่าส่ง ค่าธรรมเนียม โฆษณาแล้ว' },
