@@ -1062,6 +1062,15 @@ const CHANNELS = [
   { name: 'LINE / Facebook', fee: 0 }
 ];
 
+/* รูปในระบบมีสองแบบ คนละความต้องการ:
+   - รูปเอกสาร (โน้ตสั่งของ ใบเสร็จ) ต้องซูมอ่านลายมือออก ย่อมากไม่ได้
+   - รูปอุปกรณ์แพค แค่ดูออกว่าเป็นชิ้นไหน เล็กได้
+   แต่ละชุดไล่จากละเอียดสุดลงมา ใช้ตัวแรกที่ยังอยู่ในโควตาที่เก็บไหว */
+const IMG_DOC = [[1800, 0.85], [1400, 0.78], [1100, 0.7]];
+const IMG_THUMB = [[720, 0.75], [520, 0.7], [380, 0.6]];
+/* localStorage มีราว 5MB และ outbox เก็บสำเนารอส่งขึ้นคลาวด์อีกชุด จึงกันเพดานรวมไว้ครึ่งเดียว */
+const IMG_BUDGET = 2000000;
+
 const NAV = [
   { key: 'dash', label: 'ภาพรวม' },
   { key: 'entry', label: 'บันทึกขาย' },
@@ -1235,15 +1244,24 @@ class Component extends DCLogic {
     if (!/^image\//.test(file.type)) return this.setState({ imgBusy: 'ไฟล์นี้ไม่ใช่รูปภาพ' });
     this.setState({ imgBusy: 'กำลังย่อรูป…' });
     try {
-      /* ย่อจนไม่เกิน ~180KB เพื่อให้ซิงก์ข้ามเครื่องได้เร็วและไม่กินโควตา */
-      let data = await this.shrinkImage(file, 480, 0.72);
-      if (data.length > 240000) data = await this.shrinkImage(file, 360, 0.6);
-      if (data.length > 240000) data = await this.shrinkImage(file, 260, 0.5);
+      const steps = /^order:/.test(name) ? IMG_DOC : IMG_THUMB;
+      let data = '';
+      for (const [max, q] of steps) {
+        const out = await this.shrinkImage(file, max, q);
+        if (this.imagesFit(name, out)) { data = out; break; }
+      }
+      if (!data) return this.setState({ imgBusy: 'รูปเยอะจนเต็มพื้นที่แล้ว ลบรูปเก่าที่ไม่ใช้ออกก่อน' });
       this.set({ images: { ...(this.state.images || {}), [name]: data }, imgBusy: '' });
     } catch (err) {
       this.setState({ imgBusy: 'อ่านรูปไม่สำเร็จ ลองรูปอื่น' });
     }
   };
+
+  /* รวมทุกรูปแล้วยังไม่เกินเพดานที่เครื่องเก็บไหวไหม — ถ้าเกินจะเซฟเงียบๆ ไม่สำเร็จ ข้อมูลหายโดยไม่รู้ตัว */
+  imagesFit(name, data) {
+    const im = { ...(this.state.images || {}), [name]: data };
+    return Object.keys(im).reduce((a, k) => a + im[k].length, 0) < IMG_BUDGET;
+  }
 
   /* ดูรูปเต็มจอ — รูปย่อในการ์ดเล็กเกินกว่าจะอ่านสลิปหรือใบสั่งของได้ */
   openImg(key, title) {
