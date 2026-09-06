@@ -493,13 +493,14 @@
           </sc-for>
         </div>
         <div style="background:#FFFDFA;border:1px solid #EBE7DF;border-radius:16px;overflow-x:auto">
-          <div style="display:grid;grid-template-columns:minmax(150px,1fr) 110px 90px 108px 60px;min-width:640px;gap:12px;padding:13px 22px;background:#FBF9F5;border-bottom:1px solid #EFEBE3;font-size:11px;font-weight:400;color:#9A9388;letter-spacing:0.06em">
-            <span>สินค้า</span><span>หมวด</span><span style="text-align:right">ขาย 30 วัน</span><span style="text-align:right">คงเหลือ</span><span></span>
+          <div style="display:grid;grid-template-columns:48px minmax(150px,1fr) 110px 90px 108px 68px;min-width:640px;gap:12px;padding:13px 22px;background:#FBF9F5;border-bottom:1px solid #EFEBE3;font-size:11px;font-weight:400;color:#9A9388;letter-spacing:0.06em">
+            <span style="text-align:center">#</span><span>สินค้า</span><span>หมวด</span><span style="text-align:right">ขาย 30 วัน</span><span style="text-align:right">คงเหลือ</span><span></span>
           </div>
           <sc-for list="{{ stockRows }}" as="s" hint-placeholder-count="10">
-            <div style="display:grid;grid-template-columns:minmax(150px,1fr) 110px 90px 108px 60px;min-width:640px;gap:12px;align-items:center;padding:11px 22px;border-bottom:1px solid #F5F2EC">
+            <div style="display:grid;grid-template-columns:48px minmax(150px,1fr) 110px 90px 108px 68px;min-width:640px;gap:12px;align-items:center;padding:11px 22px;border-bottom:1px solid #F5F2EC">
+              <div style="text-align:center;font-size:11px;font-weight:300;color:#9A9388">{{ s.sku }}</div>
               <div style="min-width:0">
-                <div style="font-size:13px;font-weight:400;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ s.name }}</div>
+                <div title="{{ s.fullName }}" style="font-size:13px;font-weight:400;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ s.name }}</div>
                 <div style="font-size:10.5px;font-weight:300;color:#A19A8E">{{ s.variant }}</div>
               </div>
               <span style="font-size:11.5px;font-weight:300;color:#8C867C;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ s.cat }}</span>
@@ -509,8 +510,8 @@
                 <input value="{{ s.stock }}" onChange="{{ s.onStock }}" onBlur="{{ s.onStockBlur }}" inputmode="numeric" style="width:62px;border:1px solid #E8E3DA;background:#FDFCF9;border-radius:8px;padding:6px 8px;font-size:12.5px;text-align:right" />
               </div>
               <div style="display:flex;gap:5px;flex:none">
-                <button onClick="{{ s.editName }}" title="แก้ไขชื่อ" style="border:1px solid #E4E0D8;background:#FBF9F5;color:#6E6860;border-radius:8px;width:36px;height:36px;font-size:14px;line-height:1;cursor:pointer;padding:0" style-hover="background:#F1EEE7">✎</button>
-                <button onClick="{{ s.editCat }}" title="แก้ไขหมวด" style="border:1px solid #E4E0D8;background:#FBF9F5;color:#6E6860;border-radius:8px;width:36px;height:36px;font-size:14px;line-height:1;cursor:pointer;padding:0" style-hover="background:#F1EEE7">📋</button>
+                <button onClick="{{ s.editName }}" title="แก้ไขชื่อ" style="border:1px solid #E4E0D8;background:#FBF9F5;color:#6E6860;border-radius:8px;width:32px;height:32px;font-size:13px;line-height:1;cursor:pointer;padding:0" style-hover="background:#F1EEE7">✎</button>
+                <button onClick="{{ s.editCat }}" title="แก้ไขหมวด" style="border:1px solid #D8A05E;background:#FBF5ED;color:#8A6E33;border-radius:8px;width:32px;height:32px;font-size:12px;line-height:1;cursor:pointer;padding:0;font-weight:500" style-hover="background:#F0E8D5">หมวด</button>
               </div>
             </div>
           </sc-for>
@@ -679,7 +680,7 @@
           <sc-for list="{{ itemRows }}" as="i" hint-placeholder-count="10">
             <div style="display:grid;grid-template-columns:minmax(150px,1fr) 96px 96px 92px 96px 60px;min-width:680px;gap:10px;align-items:center;padding:11px 22px;border-bottom:1px solid #F5F2EC">
               <div style="min-width:0">
-                <div style="font-size:13px;font-weight:400;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ i.name }}</div>
+                <div title="{{ i.fullName }}" style="font-size:13px;font-weight:400;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ i.name }}</div>
                 <div style="font-size:10.5px;font-weight:300;color:#A19A8E">{{ i.meta }}</div>
               </div>
               <div style="display:flex;justify-content:flex-end">
@@ -1173,7 +1174,13 @@ const shortName = src => {
   do { prev = full; full = full.replace(/^(สินค้าใหม่|ใหม่|new)\s*!*\s*/i, '').replace(/^(moonlab|moolab)\.?\s*\|\s*/i, '').trim(); } while (full !== prev);
   const m = full.match(/[’‘'"“”]([^’‘'"“”]{2,40})[‘’'"“”]/);
   if (m) return m[1].trim();
-  return full.split(/[|·\-–]/)[0].trim().slice(0, 46);
+  /* ตัดหลังขีดกลางออกไม่ได้ ชื่อจริงหลายรุ่นมีขีดคั่นอยู่กลางชื่อ (เช่น ML02-Gold) */
+  const head = full.split(/[|·]/)[0].trim();
+  if (head.length <= 72) return head;
+  /* ถ้ายาวจริงค่อยย่อ แต่ตัดที่ช่องว่างเพื่อไม่ให้ขาดกลางคำ และใส่ … ให้รู้ว่ายังมีต่อ */
+  const cut = head.slice(0, 72);
+  const sp = cut.lastIndexOf(' ');
+  return (sp > 40 ? cut.slice(0, sp) : cut).trim() + '…';
 };
 const num = v => { const n = parseFloat(String(v).replace(/[^0-9.\-]/g, '')); return isFinite(n) ? n : 0; };
 
@@ -2588,8 +2595,8 @@ class Component extends DCLogic {
         { label: 'ใกล้หมด (≤' + THRESHOLD + ')', value: nf(P.filter(p => p.stock > 0 && p.stock <= THRESHOLD).length), color: AMBER },
         { label: 'หมดสต็อก', value: nf(P.filter(p => p.stock <= 0).length), color: RED }
       ],
-      stockRows: filtered.slice(0, 60).map(p => ({
-        name: p.short, variant: p.variant || '—', cat: p.cat, sold: (sold30[p.id] || 0) + ' ชิ้น',
+      stockRows: filtered.slice(0, 60).map((p, idx) => ({
+        sku: p.id, name: p.short, fullName: p.name, variant: p.variant || '—', cat: p.cat, sold: (sold30[p.id] || 0) + ' ชิ้น',
         stock: this.draftVal('p:stock:' + p.id, p.stock),
         onStockBlur: this.clearDraft('p:stock:' + p.id),
         dot: p.stock <= 0 ? RED : p.stock <= THRESHOLD ? AMBER : GREEN,
@@ -2714,7 +2721,7 @@ class Component extends DCLogic {
         const pk = this.pkgUnitCost(p.cat);
         const m = p.price - p.cost - pk - p.price * 0.08;
         return {
-          name: p.short, meta: p.cat + (p.variant ? ' · ' + p.variant : ''),
+          name: p.short, fullName: p.name, meta: p.cat + (p.variant ? ' · ' + p.variant : ''),
           price: this.draftVal('p:price:' + p.id, p.price),
           cost: this.draftVal('p:cost:' + p.id, p.cost),
           onPriceBlur: this.clearDraft('p:price:' + p.id),
