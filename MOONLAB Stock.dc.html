@@ -477,8 +477,10 @@
     <sc-if value="{{ isStock }}">
       <div>
         <div style="font-size:11px;font-weight:400;letter-spacing:0.2em;color:#A19A8E;text-transform:uppercase;margin-bottom:7px">คลังสินค้า</div>
-        <div style="font-size:26px;font-weight:400;margin-bottom:18px">สต็อกสินค้า</div>
-        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-bottom:20px">
+        <div style="font-size:clamp(21px,4.4vw,26px);font-weight:400;letter-spacing:-0.01em;margin-bottom:10px">สินค้าและสต็อก</div>
+        <div style="font-size:12.5px;font-weight:300;color:#8C867C;margin-bottom:20px;max-width:820px;text-wrap:pretty">จำนวนคงเหลือ ราคาขาย และต้นทุนอยู่ในตารางเดียวกัน แก้ช่องไหนก็บันทึกทันที · ต้นทุนตั้งต้นประเมินไว้ 35% ของราคาขาย แก้ให้ตรงกับต้นทุนนำเข้าจริงเพื่อให้กำไรสุทธิแม่นขึ้น</div>
+
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-bottom:12px">
           <sc-for list="{{ stockKpis }}" as="k" hint-placeholder-count="4">
             <div style="background:#FFFDFA;border:1px solid #EBE7DF;border-radius:16px;padding:clamp(15px,2.8vw,18px) clamp(15px,3vw,20px)">
               <div style="font-size:11.5px;font-weight:400;color:#9A9388;margin-bottom:9px">{{ k.label }}</div>
@@ -486,6 +488,16 @@
             </div>
           </sc-for>
         </div>
+
+        <div style="background:#FFFDFA;border:1px solid #EBE7DF;border-radius:16px;padding:clamp(14px,2.6vw,18px) clamp(16px,3.2vw,22px);margin-bottom:12px;display:flex;flex-wrap:wrap;align-items:center;gap:14px">
+          <div style="font-size:13.5px;font-weight:500">นำเข้าข้อมูลค่าต้นทุน</div>
+          <label style="border:1px dashed #25F4EE;background:#F0FFFE;border-radius:11px;padding:11px 16px;font-size:12px;font-weight:500;cursor:pointer;color:#0A5A56;flex:none" style-hover="background:#D4F9F7">
+            📊 Excel
+            <input type="file" accept=".xlsx,.xls" onChange="{{ onItemsExcel }}" style="display:none" />
+          </label>
+          <div style="flex:1;min-width:180px;font-size:11.5px;font-weight:300;color:#8C867C">{{ itemsExcelNote }}</div>
+        </div>
+
         <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px;align-items:center">
           <input value="{{ pq }}" onChange="{{ onPq }}" placeholder="ค้นหาสินค้า" style="flex:1;min-width:200px;border:1px solid #E0DBD2;background:#FFFDFA;border-radius:10px;padding:10px 13px;font-size:13.5px" />
           <sc-for list="{{ catFilters }}" as="c" hint-placeholder-count="4">
@@ -493,32 +505,40 @@
           </sc-for>
           <button onClick="{{ addProduct }}" style="border:none;background:#1B1A18;color:#F6F4F0;border-radius:10px;padding:10px 18px;font-size:13px;font-weight:500;cursor:pointer;flex:none;white-space:nowrap" style-hover="background:#332F2A">+ เพิ่มสินค้า</button>
         </div>
+
         <div style="background:#FFFDFA;border:1px solid #EBE7DF;border-radius:16px;overflow-x:auto">
-          <div style="display:grid;grid-template-columns:48px minmax(150px,1fr) 110px 90px 108px 68px;min-width:640px;gap:12px;padding:13px 22px;background:#FBF9F5;border-bottom:1px solid #EFEBE3;font-size:11px;font-weight:400;color:#9A9388;letter-spacing:0.06em">
-            <span style="text-align:center">#</span><span>สินค้า</span><span>หมวด</span><span style="text-align:right">ขาย 30 วัน</span><span style="text-align:right">คงเหลือ</span><span></span>
+          <div style="display:grid;grid-template-columns:44px minmax(160px,1fr) 104px 104px 84px 86px 86px 74px 88px 72px;min-width:1030px;gap:10px;padding:13px clamp(14px,3vw,22px);background:#FBF9F5;border-bottom:1px solid #EFEBE3;font-size:11px;font-weight:400;color:#9A9388;letter-spacing:0.06em">
+            <span style="text-align:center">#</span><span>สินค้า</span><span>หมวด</span><span style="text-align:right">คงเหลือ</span><span style="text-align:right">ขาย 30 วัน</span><span style="text-align:right">ราคาขาย</span><span style="text-align:right">ต้นทุน</span><span style="text-align:right">ค่าแพค</span><span style="text-align:right">กำไร/ชิ้น</span><span></span>
           </div>
           <sc-for list="{{ stockRows }}" as="s" hint-placeholder-count="10">
-            <div style="display:grid;grid-template-columns:48px minmax(150px,1fr) 110px 90px 108px 68px;min-width:640px;gap:12px;align-items:center;padding:11px 22px;border-bottom:1px solid #F5F2EC">
-              <div style="text-align:center;font-size:11px;font-weight:300;color:#9A9388">{{ s.sku }}</div>
+            <div style="display:grid;grid-template-columns:44px minmax(160px,1fr) 104px 104px 84px 86px 86px 74px 88px 72px;min-width:1030px;gap:10px;align-items:center;padding:11px clamp(14px,3vw,22px);border-bottom:1px solid #F5F2EC">
+              <div style="text-align:center;font-size:11px;font-weight:300;color:#9A9388;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ s.sku }}</div>
               <div style="min-width:0">
                 <div title="{{ s.fullName }}" style="font-size:13px;font-weight:400;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ s.name }}</div>
-                <div style="font-size:10.5px;font-weight:300;color:#A19A8E">{{ s.variant }}</div>
+                <div style="font-size:10.5px;font-weight:300;color:#A19A8E;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ s.variant }}</div>
               </div>
               <span style="font-size:11.5px;font-weight:300;color:#8C867C;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ s.cat }}</span>
-              <span style="font-size:12.5px;font-weight:300;color:#6E6860;text-align:right">{{ s.sold }}</span>
               <div style="display:flex;justify-content:flex-end;align-items:center;gap:7px">
                 <span style="width:6px;height:6px;border-radius:50%;background:{{ s.dot }};flex:none"></span>
-                <input value="{{ s.stock }}" onChange="{{ s.onStock }}" onBlur="{{ s.onStockBlur }}" inputmode="numeric" style="width:62px;border:1px solid #E8E3DA;background:#FDFCF9;border-radius:8px;padding:6px 8px;font-size:12.5px;text-align:right" />
+                <input value="{{ s.stock }}" onChange="{{ s.onStock }}" onBlur="{{ s.onStockBlur }}" inputmode="numeric" style="width:60px;border:1px solid #E8E3DA;background:#FDFCF9;border-radius:8px;padding:6px 8px;font-size:12.5px;text-align:right" />
               </div>
+              <span style="font-size:12.5px;font-weight:300;color:#6E6860;text-align:right">{{ s.sold }}</span>
+              <div style="display:flex;justify-content:flex-end">
+                <input value="{{ s.price }}" onChange="{{ s.onPrice }}" onBlur="{{ s.onPriceBlur }}" inputmode="decimal" style="width:70px;border:1px solid #E8E3DA;background:#FDFCF9;border-radius:8px;padding:6px 8px;font-size:12.5px;text-align:right" />
+              </div>
+              <div style="display:flex;justify-content:flex-end">
+                <input value="{{ s.cost }}" onChange="{{ s.onCost }}" onBlur="{{ s.onCostBlur }}" inputmode="decimal" style="width:70px;border:1px solid #E8E3DA;background:#FDFCF9;border-radius:8px;padding:6px 8px;font-size:12.5px;text-align:right" />
+              </div>
+              <span style="font-size:12px;font-weight:300;color:#8C867C;text-align:right">{{ s.pkg }}</span>
+              <span style="font-size:13px;font-weight:500;text-align:right;color:{{ s.marginColor }}">{{ s.margin }}</span>
               <div style="display:flex;gap:5px;flex:none">
                 <button onClick="{{ s.editName }}" title="แก้ไขชื่อ" style="border:1px solid #E4E0D8;background:#FBF9F5;color:#6E6860;border-radius:8px;width:32px;height:32px;font-size:13px;line-height:1;cursor:pointer;padding:0" style-hover="background:#F1EEE7">✎</button>
                 <button onClick="{{ s.editCat }}" title="แก้ไขหมวด" style="border:1px solid #D8A05E;background:#FBF5ED;color:#8A6E33;border-radius:8px;width:32px;height:32px;font-size:12px;line-height:1;cursor:pointer;padding:0;font-weight:500" style-hover="background:#F0E8D5">หมวด</button>
               </div>
             </div>
           </sc-for>
-          <div style="padding:13px 22px;font-size:11.5px;font-weight:300;color:#A19A8E;min-width:640px">{{ stockFootnote }}</div>
+          <div style="padding:13px clamp(14px,3vw,22px);font-size:11.5px;font-weight:300;color:#A19A8E;min-width:1030px">{{ stockFootnote }}</div>
         </div>
-
       </div>
     </sc-if>
 
@@ -526,7 +546,7 @@
       <div style="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.3);display:flex;align-items:center;justify-content:center;z-index:999">
         <div style="background:#FFFDFA;border-radius:16px;padding:28px;max-width:420px;width:90%">
           <div style="font-size:15px;font-weight:500;margin-bottom:18px">{{ editModalTitle }}</div>
-          <input value="{{ editingValue }}" onChange="{{ onEditingValue }}" style="width:100%;border:1px solid #E0DBD2;background:#FDFCF9;border-radius:10px;padding:11px 13px;font-size:13.5px;margin-bottom:18px" />
+          <input value="{{ editingValue }}" onChange="{{ onEditingValue }}" placeholder="{{ editPlaceholder }}" style="width:100%;border:1px solid #E0DBD2;background:#FDFCF9;border-radius:10px;padding:11px 13px;font-size:13.5px;margin-bottom:18px" />
           <sc-if value="{{ isEditCat }}">
             <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:18px;max-height:140px;overflow-y:auto">
               <sc-for list="{{ catOptions }}" as="c" hint-placeholder-count="7">
@@ -649,56 +669,6 @@
               </div>
             </div>
           </sc-for>
-        </div>
-      </div>
-    </sc-if>
-
-    <sc-if value="{{ isItems }}">
-      <div>
-        <div style="font-size:11px;font-weight:400;letter-spacing:0.2em;color:#A19A8E;text-transform:uppercase;margin-bottom:7px">รายการสินค้า</div>
-        <div style="font-size:clamp(21px,4.4vw,26px);font-weight:400;letter-spacing:-0.01em;margin-bottom:10px">ราคาและต้นทุน</div>
-        <div style="font-size:12.5px;font-weight:300;color:#8C867C;margin-bottom:20px">ต้นทุนตั้งต้นประเมินไว้ 35% ของราคาขาย แก้ให้ตรงกับต้นทุนนำเข้าจริงเพื่อให้กำไรสุทธิแม่นขึ้น</div>
-
-        <div style="background:#FFFDFA;border:1px solid #EBE7DF;border-radius:16px;padding:clamp(16px,3vw,20px) clamp(16px,3.2vw,24px);margin-bottom:14px;display:flex;flex-wrap:wrap;align-items:center;gap:14px">
-          <div style="font-size:13.5px;font-weight:500">นำเข้าข้อมูลค่าต้นทุน</div>
-          <label style="border:1px dashed #25F4EE;background:#F0FFFE;border-radius:11px;padding:11px 16px;font-size:12px;font-weight:500;cursor:pointer;color:#0A5A56;flex:none" style-hover="background:#D4F9F7">
-            📊 Excel
-            <input type="file" accept=".xlsx,.xls" onChange="{{ onItemsExcel }}" style="display:none" />
-          </label>
-          <div style="flex:1;min-width:180px;font-size:11.5px;font-weight:300;color:#8C867C">{{ itemsExcelNote }}</div>
-        </div>
-
-        <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px">
-          <input value="{{ pq }}" onChange="{{ onPq }}" placeholder="ค้นหาสินค้า" style="flex:1;min-width:200px;border:1px solid #E0DBD2;background:#FFFDFA;border-radius:10px;padding:10px 13px;font-size:13.5px" />
-          <sc-for list="{{ catFilters }}" as="c" hint-placeholder-count="4">
-            <button onClick="{{ c.go }}" style="{{ c.style }}">{{ c.label }}</button>
-          </sc-for>
-        </div>
-        <div style="background:#FFFDFA;border:1px solid #EBE7DF;border-radius:16px;overflow-x:auto">
-          <div style="display:grid;grid-template-columns:minmax(150px,1fr) 96px 96px 92px 96px 60px;min-width:680px;gap:10px;padding:14px clamp(14px,3vw,22px);background:#FBF9F5;border-bottom:1px solid #EFEBE3;font-size:11px;font-weight:400;color:#9A9388;letter-spacing:0.06em">
-            <span>สินค้า</span><span style="text-align:right">ราคาขาย</span><span style="text-align:right">ต้นทุน</span><span style="text-align:right">ค่าแพค</span><span style="text-align:right">กำไร/ชิ้น</span><span></span>
-          </div>
-          <sc-for list="{{ itemRows }}" as="i" hint-placeholder-count="10">
-            <div style="display:grid;grid-template-columns:minmax(150px,1fr) 96px 96px 92px 96px 60px;min-width:680px;gap:10px;align-items:center;padding:11px 22px;border-bottom:1px solid #F5F2EC">
-              <div style="min-width:0">
-                <div title="{{ i.fullName }}" style="font-size:13px;font-weight:400;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ i.name }}</div>
-                <div style="font-size:10.5px;font-weight:300;color:#A19A8E">{{ i.meta }}</div>
-              </div>
-              <div style="display:flex;justify-content:flex-end">
-                <input value="{{ i.price }}" onChange="{{ i.onPrice }}" onBlur="{{ i.onPriceBlur }}" inputmode="decimal" style="width:70px;border:1px solid #E8E3DA;background:#FDFCF9;border-radius:8px;padding:6px 8px;font-size:12.5px;text-align:right" />
-              </div>
-              <div style="display:flex;justify-content:flex-end">
-                <input value="{{ i.cost }}" onChange="{{ i.onCost }}" onBlur="{{ i.onCostBlur }}" inputmode="decimal" style="width:70px;border:1px solid #E8E3DA;background:#FDFCF9;border-radius:8px;padding:6px 8px;font-size:12.5px;text-align:right" />
-              </div>
-              <span style="font-size:12.5px;font-weight:300;color:#8C867C;text-align:right">{{ i.pkg }}</span>
-              <span style="font-size:13px;font-weight:500;text-align:right;color:{{ i.color }}">{{ i.margin }}</span>
-              <div style="display:flex;gap:5px;flex:none">
-                <button onClick="{{ i.editName }}" title="แก้ไขชื่อ" style="border:1px solid #E4E0D8;background:#FBF9F5;color:#6E6860;border-radius:8px;width:36px;height:36px;font-size:14px;line-height:1;cursor:pointer;padding:0" style-hover="background:#F1EEE7">✎</button>
-                <button onClick="{{ i.editCat }}" title="แก้ไขหมวด" style="border:1px solid #E4E0D8;background:#FBF9F5;color:#6E6860;border-radius:8px;width:36px;height:36px;font-size:14px;line-height:1;cursor:pointer;padding:0" style-hover="background:#F1EEE7">📋</button>
-              </div>
-            </div>
-          </sc-for>
-          <div style="padding:13px 22px;font-size:11.5px;font-weight:300;color:#A19A8E;min-width:680px">{{ itemFootnote }}</div>
         </div>
       </div>
     </sc-if>
@@ -1095,9 +1065,8 @@ const CHANNELS = [
 const NAV = [
   { key: 'dash', label: 'ภาพรวม' },
   { key: 'entry', label: 'บันทึกขาย' },
-  { key: 'stock', label: 'สต็อกสินค้า' },
+  { key: 'stock', label: 'สินค้าและสต็อก' },
   { key: 'pkg', label: 'แพคเกจ' },
-  { key: 'items', label: 'สินค้า/ต้นทุน' },
   { key: 'plan', label: 'วางแผนสั่งของ' },
   { key: 'report', label: 'รายงาน' },
   { key: 'todo', label: 'เช็คลิสต์' },
@@ -1214,7 +1183,7 @@ class Component extends DCLogic {
     newPkgName: '', newPkgCost: '', newPkgStock: '',
     importRows: [], importNote: '', excelNote: '', importedOrders: [], cart: [], okBanner: '',
     itemsExcelNote: '',
-    editingId: '', editingField: '', editingValue: '',
+    editingId: '', editingField: '', editingValue: '', draftNewId: '',
     tasks: [], newTaskText: '', newTaskTime: '',
     orders: [], newOrderDate: today(), newOrderAmount: '', newOrderNote: '',
     planShowCats: Object.keys(RULES).reduce((a, c) => ({ ...a, [c]: true }), {}),
@@ -2177,22 +2146,32 @@ class Component extends DCLogic {
       products: [...this.state.products, newProduct],
       editingId: newId,
       editingField: 'name',
-      editingValue: newProduct.name
-    }, () => this.persist());
+      editingValue: '',
+      draftNewId: newId
+    });
   }
   saveEdit = () => {
     const st = this.state;
     if (!st.editingId) return;
     const v = st.editingValue.trim();
-    if (!v) return this.setState({ editingId: '', editingField: '', editingValue: '' });
+    if (!v) return this.cancelEdit();
     this.set({
       products: st.products.map(p => p.id === st.editingId
         ? (st.editingField === 'name' ? { ...p, name: v, short: v } : { ...p, cat: v })
         : p)
     });
-    this.setState({ editingId: '', editingField: '', editingValue: '' });
+    this.setState({ editingId: '', editingField: '', editingValue: '', draftNewId: '' });
   };
-  cancelEdit = () => this.setState({ editingId: '', editingField: '', editingValue: '' });
+  /* ยกเลิกตอนตั้งชื่อสินค้าใหม่ = ทิ้งสินค้านั้นไปเลย ไม่งั้นจะค้างเป็นรายการเปล่าในคลัง */
+  cancelEdit = () => {
+    const st = this.state;
+    const patch = { editingId: '', editingField: '', editingValue: '', draftNewId: '' };
+    if (st.draftNewId && st.draftNewId === st.editingId) {
+      this.set({ ...patch, products: st.products.filter(p => p.id !== st.draftNewId) });
+      return;
+    }
+    this.setState(patch);
+  };
   editPkg(name, field, v) {
     this.set({
       numDraft: this.withDraft('pkg:' + field + ':' + name, v),
@@ -2324,7 +2303,7 @@ class Component extends DCLogic {
       pinClear: this.pinClear,
       threshold: THRESHOLD,
       isDash: st.tab === 'dash', isEntry: st.tab === 'entry', isStock: st.tab === 'stock',
-      isPkg: st.tab === 'pkg', isItems: st.tab === 'items', isPlan: st.tab === 'plan', isReport: st.tab === 'report',
+      isPkg: st.tab === 'pkg', isPlan: st.tab === 'plan', isReport: st.tab === 'report',
       isTodo: st.tab === 'todo', isLedger: st.tab === 'ledger',
 
       newTaskText: st.newTaskText, newTaskTime: st.newTaskTime,
@@ -2615,19 +2594,34 @@ class Component extends DCLogic {
         { label: 'ใกล้หมด (≤' + THRESHOLD + ')', value: nf(P.filter(p => p.stock > 0 && p.stock <= THRESHOLD).length), color: AMBER },
         { label: 'หมดสต็อก', value: nf(P.filter(p => p.stock <= 0).length), color: RED }
       ],
-      stockRows: filtered.slice(0, 60).map((p, idx) => ({
-        sku: p.id, name: p.short, fullName: p.name, variant: p.variant || '—', cat: p.cat, sold: (sold30[p.id] || 0) + ' ชิ้น',
-        stock: this.draftVal('p:stock:' + p.id, p.stock),
-        onStockBlur: this.clearDraft('p:stock:' + p.id),
-        dot: p.stock <= 0 ? RED : p.stock <= THRESHOLD ? AMBER : GREEN,
-        onStock: e => this.editProduct(p.id, 'stock', e.target.value),
-        editName: () => this.openEditName(p.id),
-        editCat: () => this.openEditCat(p.id)
-      })),
-      stockFootnote: 'แสดง ' + Math.min(60, filtered.length) + ' จาก ' + filtered.length + ' รายการ · แก้ตัวเลขคงเหลือได้ทันทีเมื่อนับสต็อกจริง',
+      stockRows: filtered.slice(0, 60).map(p => {
+        const pk = this.pkgUnitCost(p.cat);
+        const m = p.price - p.cost - pk - p.price * 0.08;
+        return {
+          sku: p.id, name: p.short, fullName: p.name, variant: p.variant || '—', cat: p.cat,
+          sold: (sold30[p.id] || 0) + ' ชิ้น',
+          stock: this.draftVal('p:stock:' + p.id, p.stock),
+          onStockBlur: this.clearDraft('p:stock:' + p.id),
+          dot: p.stock <= 0 ? RED : p.stock <= THRESHOLD ? AMBER : GREEN,
+          onStock: e => this.editProduct(p.id, 'stock', e.target.value),
+          price: this.draftVal('p:price:' + p.id, p.price),
+          cost: this.draftVal('p:cost:' + p.id, p.cost),
+          onPriceBlur: this.clearDraft('p:price:' + p.id),
+          onCostBlur: this.clearDraft('p:cost:' + p.id),
+          onPrice: e => this.editProduct(p.id, 'price', e.target.value),
+          onCost: e => this.editProduct(p.id, 'cost', e.target.value),
+          pkg: nf1(pk) + ' ฿',
+          margin: nf(m) + ' ฿', marginColor: m > 0 ? GREEN : RED,
+          editName: () => this.openEditName(p.id),
+          editCat: () => this.openEditCat(p.id)
+        };
+      }),
+      stockFootnote: 'แสดง ' + Math.min(60, filtered.length) + ' จาก ' + filtered.length + ' รายการ · แก้คงเหลือ ราคาขาย ต้นทุนได้ทันที · กำไร/ชิ้น คิดที่ค่าธรรมเนียมแพลตฟอร์ม 8% ยังไม่หักค่าส่งและค่าโฆษณา',
       addProduct: this.addProduct,
       showEditModal: st.editingId !== '',
-      editModalTitle: st.editingField === 'name' ? 'แก้ไขชื่อสินค้า' : st.editingField === 'cat' ? 'แก้ไขหมวดสินค้า' : '',
+      editModalTitle: st.draftNewId && st.draftNewId === st.editingId ? 'ตั้งชื่อสินค้าใหม่'
+        : st.editingField === 'name' ? 'แก้ไขชื่อสินค้า' : st.editingField === 'cat' ? 'แก้ไขหมวดสินค้า' : '',
+      editPlaceholder: st.editingField === 'name' ? 'ชื่อสินค้า' : 'ชื่อหมวด',
       isEditCat: st.editingField === 'cat',
       editingValue: st.editingValue,
       onEditingValue: e => this.setState({ editingValue: e.target.value }),
@@ -2738,24 +2732,6 @@ class Component extends DCLogic {
         };
       }),
 
-      itemRows: filtered.slice(0, 60).map(p => {
-        const pk = this.pkgUnitCost(p.cat);
-        const m = p.price - p.cost - pk - p.price * 0.08;
-        return {
-          name: p.short, fullName: p.name, meta: p.cat + (p.variant ? ' · ' + p.variant : ''),
-          price: this.draftVal('p:price:' + p.id, p.price),
-          cost: this.draftVal('p:cost:' + p.id, p.cost),
-          onPriceBlur: this.clearDraft('p:price:' + p.id),
-          onCostBlur: this.clearDraft('p:cost:' + p.id),
-          pkg: nf1(pk) + ' ฿',
-          margin: nf(m) + ' ฿', color: m > 0 ? GREEN : RED,
-          onPrice: e => this.editProduct(p.id, 'price', e.target.value),
-          onCost: e => this.editProduct(p.id, 'cost', e.target.value),
-          editName: () => this.openEditName(p.id),
-          editCat: () => this.openEditCat(p.id)
-        };
-      }),
-      itemFootnote: 'กำไร/ชิ้น คิดที่ค่าธรรมเนียมแพลตฟอร์ม 8% ยังไม่หักค่าส่งและค่าโฆษณา',
       onItemsExcel: this.onItemsExcel,
       itemsExcelNote: st.itemsExcelNote,
 
