@@ -80,12 +80,14 @@
         <input type="file" accept="image/*" onChange="{{ onImageFile }}" id="moonlab-img-input" style="display:none" />
 
         <div style="{{ viewerStyle }}" onClick="{{ closeImg }}">
-          <div style="{{ viewerImgStyle }}"></div>
-          <div style="position:absolute;top:0;left:0;right:0;display:flex;align-items:center;gap:12px;padding:16px 18px">
-            <div style="flex:1;min-width:0;font-size:13px;font-weight:400;color:#F6F4F0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ viewerTitle }}</div>
-            <button onClick="{{ closeImg }}" style="border:1px solid rgba(246,244,240,0.35);background:rgba(27,26,24,0.55);color:#F6F4F0;border-radius:999px;padding:8px 18px;font-size:13px;font-weight:400;cursor:pointer;flex:none">ปิด</button>
+          <div style="{{ viewerScrollStyle }}" onClick="{{ zoomImg }}">
+            <div style="{{ viewerImgStyle }}"></div>
           </div>
-          <div style="position:absolute;bottom:16px;left:0;right:0;text-align:center;font-size:11.5px;font-weight:300;color:rgba(246,244,240,0.6)">แตะที่ใดก็ได้เพื่อปิด</div>
+          <div style="position:absolute;top:0;left:0;right:0;display:flex;align-items:center;gap:12px;padding:16px 18px;pointer-events:none">
+            <div style="flex:1;min-width:0;font-size:13px;font-weight:400;color:#F6F4F0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-shadow:0 1px 3px rgba(0,0,0,0.7)">{{ viewerTitle }}</div>
+            <button onClick="{{ closeImg }}" style="border:1px solid rgba(246,244,240,0.35);background:rgba(27,26,24,0.75);color:#F6F4F0;border-radius:999px;padding:8px 18px;font-size:13px;font-weight:400;cursor:pointer;flex:none;pointer-events:auto">ปิด</button>
+          </div>
+          <div style="position:absolute;bottom:14px;left:0;right:0;text-align:center;font-size:11.5px;font-weight:300;color:rgba(246,244,240,0.75);pointer-events:none;text-shadow:0 1px 3px rgba(0,0,0,0.7)">{{ viewerHint }}</div>
         </div>
         <div style="font-size:12.5px;font-weight:300;color:#8C867C">{{ headNote }}</div>
       </div>
@@ -1066,10 +1068,12 @@ const CHANNELS = [
    - รูปเอกสาร (โน้ตสั่งของ ใบเสร็จ) ต้องซูมอ่านลายมือออก ย่อมากไม่ได้
    - รูปอุปกรณ์แพค แค่ดูออกว่าเป็นชิ้นไหน เล็กได้
    แต่ละชุดไล่จากละเอียดสุดลงมา ใช้ตัวแรกที่ยังอยู่ในโควตาที่เก็บไหว */
-const IMG_DOC = [[1800, 0.85], [1400, 0.78], [1100, 0.7]];
+const IMG_DOC = [[2400, 0.82], [1800, 0.8], [1400, 0.72]];
 const IMG_THUMB = [[720, 0.75], [520, 0.7], [380, 0.6]];
-/* localStorage มีราว 5MB และ outbox เก็บสำเนารอส่งขึ้นคลาวด์อีกชุด จึงกันเพดานรวมไว้ครึ่งเดียว */
-const IMG_BUDGET = 2000000;
+/* localStorage มีราว 5MB และ outbox เก็บสำเนารอส่งขึ้นคลาวด์อีกชุด จึงกันเพดานรวมไว้ราวครึ่งเดียว */
+const IMG_BUDGET = 2500000;
+/* ระดับซูมตอนเปิดรูปเต็มจอ — 4x พอให้อ่านลายมือบนโน้ตที่ถ่ายมาทั้งหน้า A4 */
+const ZOOMS = [1, 2, 4];
 
 const NAV = [
   { key: 'dash', label: 'ภาพรวม' },
@@ -1204,7 +1208,7 @@ class Component extends DCLogic {
     editSaleId: '', editDraft: {}, resetArm: false,
     images: {},        /* รูปอุปกรณ์แพค: ชื่อ → รูปย่อแล้ว เก็บบนคลาวด์เหมือนข้อมูลอื่น */
     dragIdx: -1, imgBusy: '', numDraft: {},
-    newCat: '', catNote: '', catArm: '', viewImg: '', viewTitle: ''
+    newCat: '', catNote: '', catArm: '', viewImg: '', viewTitle: '', viewZoom: 1
   };
 
   /* ---- รูปอุปกรณ์แพค ---- */
@@ -1267,9 +1271,23 @@ class Component extends DCLogic {
   openImg(key, title) {
     const img = (this.state.images || {})[key];
     if (!img) return;
-    this.setState({ viewImg: img, viewTitle: title || '' });
+    this.lockScroll(true);
+    this.setState({ viewImg: img, viewTitle: title || '', viewZoom: 1 });
   }
-  closeImg = () => this.setState({ viewImg: '', viewTitle: '' });
+  closeImg = () => {
+    this.lockScroll(false);
+    this.setState({ viewImg: '', viewTitle: '', viewZoom: 1 });
+  };
+  /* กันหน้าเว็บด้านหลังเลื่อนตามตอนลากดูรูปที่ซูมไว้ ไม่งั้นบนมือถือจะลากแล้วหลุดออกจากรูป */
+  lockScroll(on) {
+    try { document.body.style.overflow = on ? 'hidden' : ''; } catch (e) { }
+  }
+  /* แตะที่รูปแล้วซูมทีละขั้น วนกลับมาขนาดพอดีจอ — ไม่ให้ปิดหน้าต่างไปด้วย ไม่งั้นซูมไม่ได้เลย */
+  zoomImg = e => {
+    if (e && e.stopPropagation) e.stopPropagation();
+    const i = ZOOMS.indexOf(this.state.viewZoom);
+    this.setState({ viewZoom: ZOOMS[(i + 1) % ZOOMS.length] });
+  };
 
   removeImage(name) {
     const images = { ...(this.state.images || {}) };
@@ -2659,13 +2677,23 @@ class Component extends DCLogic {
       viewerTitle: st.viewTitle || '',
       viewerStyle: st.viewImg
         ? { position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', zIndex: 9998,
-            background: 'rgba(27,26,24,0.94)', display: 'block', cursor: 'zoom-out' }
+            background: 'rgba(27,26,24,0.94)', display: 'block' }
+        : { display: 'none' },
+      /* กรอบเลื่อนได้ พอซูมแล้วรูปใหญ่เกินกรอบจะได้ลากดูส่วนที่เหลือ */
+      viewerScrollStyle: st.viewImg
+        ? { position: 'absolute', top: 56, left: 16, right: 16, bottom: 40, overflow: 'auto',
+            WebkitOverflowScrolling: 'touch',
+            cursor: st.viewZoom >= ZOOMS[ZOOMS.length - 1] ? 'zoom-out' : 'zoom-in' }
         : { display: 'none' },
       viewerImgStyle: st.viewImg
-        ? { position: 'absolute', top: 56, left: 16, right: 16, bottom: 40,
+        ? { width: (st.viewZoom * 100) + '%', height: (st.viewZoom * 100) + '%',
             backgroundImage: 'url("' + st.viewImg + '")', backgroundSize: 'contain',
             backgroundRepeat: 'no-repeat', backgroundPosition: 'center' }
         : { display: 'none' },
+      viewerHint: st.viewZoom > 1
+        ? 'ซูม ' + st.viewZoom + 'x · เลื่อนดูรอบๆ ได้ · แตะรูปเพื่อซูมต่อ'
+        : 'แตะที่รูปเพื่อซูมเข้า · แตะพื้นที่ว่างรอบรูปเพื่อปิด',
+      zoomImg: this.zoomImg,
       pkgRows: st.pkg.map((p, i) => {
         const img = (st.images || {})[p.name] || '';
         const used = Object.keys(this.rules()).filter(c => this.rules()[c][p.name]).length;
