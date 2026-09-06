@@ -34,7 +34,8 @@
     importedOrders: { type: 'set' },
     adSpend: { type: 'map' },
     rules: { type: 'map' },
-    fees: { type: 'map' }
+    fees: { type: 'map' },
+    images: { type: 'map' }
   };
   var KEYS = Object.keys(SCHEMA);
 

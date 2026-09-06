@@ -15,7 +15,7 @@ mkdir -p "$OUT"
 cp "MOONLAB Stock.dc.html" "$OUT/index.html"
 
 # ไฟล์ประกอบ
-cp support.js image-slot.js cloud.js pwa.js products.json manifest.webmanifest "$OUT/"
+cp support.js cloud.js pwa.js products.json manifest.webmanifest "$OUT/"
 cp icon-180.png icon-192.png icon-512.png "$OUT/"
 
 # service worker + ประทับเวอร์ชัน

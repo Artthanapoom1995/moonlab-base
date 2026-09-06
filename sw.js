@@ -6,7 +6,7 @@ var SHELL = 'moonlab-shell-' + VERSION;
 var LIB = 'moonlab-lib-v1';
 
 var PRECACHE = [
-  './', './index.html', './support.js', './image-slot.js', './cloud.js',
+  './', './index.html', './support.js', './cloud.js',
   './config.js', './pwa.js', './products.json', './manifest.webmanifest',
   './icon-180.png', './icon-192.png', './icon-512.png'
 ];

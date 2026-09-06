@@ -15,7 +15,7 @@ Copy-Item (Join-Path $root 'MOONLAB Stock.dc.html') (Join-Path $out 'index.html'
 
 # 2) ไฟล์ประกอบ
 $files = @(
-  'support.js','image-slot.js','cloud.js','pwa.js',
+  'support.js','cloud.js','pwa.js',
   'products.json','manifest.webmanifest',
   'icon-180.png','icon-192.png','icon-512.png'
 )
