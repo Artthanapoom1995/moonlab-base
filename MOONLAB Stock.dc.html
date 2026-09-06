@@ -2513,8 +2513,14 @@ class Component extends DCLogic {
             + ';border-radius:16px;overflow:hidden;display:flex;flex-direction:column'
             + (st.dragIdx === i ? ';box-shadow:0 6px 18px rgba(27,26,24,0.13);transform:scale(1.02)' : '')
             + ';transition:transform .12s ease,box-shadow .12s ease',
-          imgStyle: 'position:absolute;inset:0;background-size:cover;background-position:center;'
-            + 'display:' + (img ? 'block' : 'none') + (img ? ';background-image:url("' + img + '")' : ''),
+          /* ต้องเป็นออบเจกต์ ไม่ใช่สตริง CSS — data URL มี ; อยู่ข้างใน (data:image/webp;base64,…)
+             ตัวรันเทมเพลตจะตัด CSS ตรง ; ทำให้เหลือแค่ url("data:image/webp") แล้วรูปไม่ขึ้น */
+          imgStyle: {
+            position: 'absolute', inset: 0,
+            backgroundSize: 'cover', backgroundPosition: 'center',
+            display: img ? 'block' : 'none',
+            backgroundImage: img ? 'url("' + img + '")' : 'none'
+          },
           phStyle: 'position:absolute;inset:0;width:100%;height:100%;border:none;background:transparent;'
             + 'display:' + (img ? 'none' : 'flex') + ';flex-direction:column;align-items:center;justify-content:center;gap:8px;cursor:pointer',
           clearImgStyle: 'border:none;background:rgba(255,253,250,0.92);color:#A19A8E;border-radius:9px;width:32px;height:32px;'
