@@ -78,6 +78,15 @@
         <button onClick="{{ syncTap }}" title="{{ syncTitle }}" style="{{ syncStyle }}">{{ syncLabel }}</button>
         <div style="font-size:11.5px;font-weight:300;color:#C09A54">{{ imgBusy }}</div>
         <input type="file" accept="image/*" onChange="{{ onImageFile }}" id="moonlab-img-input" style="display:none" />
+
+        <div style="{{ viewerStyle }}" onClick="{{ closeImg }}">
+          <div style="{{ viewerImgStyle }}"></div>
+          <div style="position:absolute;top:0;left:0;right:0;display:flex;align-items:center;gap:12px;padding:16px 18px">
+            <div style="flex:1;min-width:0;font-size:13px;font-weight:400;color:#F6F4F0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ viewerTitle }}</div>
+            <button onClick="{{ closeImg }}" style="border:1px solid rgba(246,244,240,0.35);background:rgba(27,26,24,0.55);color:#F6F4F0;border-radius:999px;padding:8px 18px;font-size:13px;font-weight:400;cursor:pointer;flex:none">ปิด</button>
+          </div>
+          <div style="position:absolute;bottom:16px;left:0;right:0;text-align:center;font-size:11.5px;font-weight:300;color:rgba(246,244,240,0.6)">แตะที่ใดก็ได้เพื่อปิด</div>
+        </div>
         <div style="font-size:12.5px;font-weight:300;color:#8C867C">{{ headNote }}</div>
       </div>
     </div>
@@ -536,13 +545,13 @@
         <div style="font-size:11px;font-weight:400;letter-spacing:0.2em;color:#A19A8E;text-transform:uppercase;margin-bottom:7px">แพคเกจ</div>
         <div style="font-size:clamp(21px,4.4vw,26px);font-weight:400;letter-spacing:-0.01em;margin-bottom:10px">สต็อกอุปกรณ์แพคเกจ</div>
         <div style="font-size:12.5px;font-weight:300;color:#8C867C;margin-bottom:14px;max-width:820px;text-wrap:pretty">ตัดออกอัตโนมัติทุกครั้งที่บันทึกขาย ตามสูตรแพคของแต่ละหมวดสินค้าด้านล่าง</div>
-        <div style="font-size:11.5px;font-weight:300;color:#A19A8E;margin-bottom:20px">แตะ ⠿ ค้างไว้แล้วลากเพื่อจัดลำดับการ์ด · ✎ เปลี่ยนรูป · 🗑 ลบรูป — ลำดับและรูปซิงก์ทุกเครื่อง</div>
+        <div style="font-size:11.5px;font-weight:300;color:#A19A8E;margin-bottom:20px">แตะ ⠿ ค้างไว้แล้วลากเพื่อจัดลำดับการ์ด · แตะรูปเพื่อดูเต็มจอ · ✎ เปลี่ยนรูป · 🗑 ลบรูป — ลำดับและรูปซิงก์ทุกเครื่อง</div>
 
         <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(196px,1fr));gap:12px;margin-bottom:12px">
           <sc-for list="{{ pkgRows }}" as="p" hint-placeholder-count="9">
             <div data-pkg-idx="{{ p.idx }}" style="{{ p.cardStyle }}">
               <div style="position:relative;width:100%;aspect-ratio:1/1;background:#F4F1EB">
-                <div role="img" aria-label="{{ p.name }}" style="{{ p.imgStyle }}"></div>
+                <button onClick="{{ p.view }}" aria-label="{{ p.name }}" title="ดูรูปเต็มจอ" style="{{ p.imgStyle }}"></button>
                 <button onClick="{{ p.pick }}" style="{{ p.phStyle }}">
                   <span style="font-size:22px;line-height:1;opacity:0.45">🖼</span>
                   <span style="font-size:11px;font-weight:300;color:#A19A8E;text-align:center;padding:0 10px">อัพโหลดรูป {{ p.name }}</span>
@@ -749,7 +758,7 @@
             <div style="font-size:13.5px;font-weight:500">ติดตามรอบสั่งของ</div>
             <div style="flex:1;min-width:200px;font-size:11.5px;font-weight:300;color:#8C867C">{{ orderSummary }}</div>
           </div>
-          <div style="font-size:11.5px;font-weight:300;color:#A19A8E;margin-bottom:16px">บันทึกวันสั่งและยอดเงิน ระบบคิดวันออกบิล (+5 วัน) และวันที่ของถึง (+15 วัน) ให้ กดที่สถานะเพื่อเลื่อนขั้น · แตะกรอบ <span style="color:#8C867C">＋ รูป</span> หน้าแต่ละรอบเพื่อแนบรูปใบสั่งของหรือสลิป</div>
+          <div style="font-size:11.5px;font-weight:300;color:#A19A8E;margin-bottom:16px">บันทึกวันสั่งและยอดเงิน ระบบคิดวันออกบิล (+5 วัน) และวันที่ของถึง (+15 วัน) ให้ กดที่สถานะเพื่อเลื่อนขั้น · แตะกรอบ <span style="color:#8C867C">＋ รูป</span> หน้าแต่ละรอบเพื่อแนบรูปใบสั่งของหรือสลิป แตะรูปย่อเพื่อดูเต็มจอ</div>
 
           <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;padding-bottom:16px;border-bottom:1px solid #F2EFE8">
             <div>
@@ -783,6 +792,7 @@
               </div>
               <div style="font-size:12.5px;font-weight:500;color:{{ o.etaColor }};min-width:96px">{{ o.eta }}</div>
               <button onClick="{{ o.cycle }}" style="{{ o.statusStyle }}">{{ o.status }}</button>
+              <button onClick="{{ o.change }}" title="เปลี่ยนรูป" style="{{ o.changeStyle }}" style-hover="color:#4B4459">✎</button>
               <button onClick="{{ o.clearImg }}" title="ลบรูปที่แนบ" style="{{ o.clearImgStyle }}" style-hover="color:#B4675C">🗑</button>
               <button onClick="{{ o.del }}" style="border:none;background:transparent;color:#C4BEB4;width:34px;height:34px;font-size:15px;line-height:1;cursor:pointer;border-radius:9px;flex:none" style-hover="color:#B4675C">×</button>
             </div>
@@ -1208,7 +1218,7 @@ class Component extends DCLogic {
     editSaleId: '', editDraft: {}, resetArm: false,
     images: {},        /* รูปอุปกรณ์แพค: ชื่อ → รูปย่อแล้ว เก็บบนคลาวด์เหมือนข้อมูลอื่น */
     dragIdx: -1, imgBusy: '', numDraft: {},
-    newCat: '', catNote: '', catArm: ''
+    newCat: '', catNote: '', catArm: '', viewImg: '', viewTitle: ''
   };
 
   /* ---- รูปอุปกรณ์แพค ---- */
@@ -1257,6 +1267,14 @@ class Component extends DCLogic {
       this.setState({ imgBusy: 'อ่านรูปไม่สำเร็จ ลองรูปอื่น' });
     }
   };
+
+  /* ดูรูปเต็มจอ — รูปย่อในการ์ดเล็กเกินกว่าจะอ่านสลิปหรือใบสั่งของได้ */
+  openImg(key, title) {
+    const img = (this.state.images || {})[key];
+    if (!img) return;
+    this.setState({ viewImg: img, viewTitle: title || '' });
+  }
+  closeImg = () => this.setState({ viewImg: '', viewTitle: '' });
 
   removeImage(name) {
     const images = { ...(this.state.images || {}) };
@@ -2597,6 +2615,17 @@ class Component extends DCLogic {
       addPkg: this.addPkg,
       onImageFile: this.onImageFile,
       imgBusy: st.imgBusy,
+      closeImg: this.closeImg,
+      viewerTitle: st.viewTitle || '',
+      viewerStyle: st.viewImg
+        ? { position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', zIndex: 9998,
+            background: 'rgba(27,26,24,0.94)', display: 'block', cursor: 'zoom-out' }
+        : { display: 'none' },
+      viewerImgStyle: st.viewImg
+        ? { position: 'absolute', top: 56, left: 16, right: 16, bottom: 40,
+            backgroundImage: 'url("' + st.viewImg + '")', backgroundSize: 'contain',
+            backgroundRepeat: 'no-repeat', backgroundPosition: 'center' }
+        : { display: 'none' },
       pkgRows: st.pkg.map((p, i) => {
         const img = (st.images || {})[p.name] || '';
         const used = Object.keys(this.rules()).filter(c => this.rules()[c][p.name]).length;
@@ -2619,11 +2648,13 @@ class Component extends DCLogic {
           /* ต้องเป็นออบเจกต์ ไม่ใช่สตริง CSS — data URL มี ; อยู่ข้างใน (data:image/webp;base64,…)
              ตัวรันเทมเพลตจะตัด CSS ตรง ; ทำให้เหลือแค่ url("data:image/webp") แล้วรูปไม่ขึ้น */
           imgStyle: {
-            position: 'absolute', inset: 0,
+            position: 'absolute', inset: 0, width: '100%', height: '100%',
+            border: 'none', padding: 0, cursor: 'zoom-in',
             backgroundSize: 'cover', backgroundPosition: 'center',
             display: img ? 'block' : 'none',
             backgroundImage: img ? 'url("' + img + '")' : 'none'
           },
+          view: () => this.openImg(p.name, p.name),
           phStyle: 'position:absolute;inset:0;width:100%;height:100%;border:none;background:transparent;'
             + 'display:' + (img ? 'none' : 'flex') + ';flex-direction:column;align-items:center;justify-content:center;gap:8px;cursor:pointer',
           clearImgStyle: 'border:none;background:rgba(255,253,250,0.92);color:#A19A8E;border-radius:9px;width:32px;height:32px;'
@@ -2758,7 +2789,16 @@ class Component extends DCLogic {
           del: () => this.delOrder(o.id),
 
           /* รูปแนบของรอบสั่ง เก็บที่เดียวกับรูปอุปกรณ์ แยกด้วยคำนำหน้า order: */
-          pick: () => this.pickImage('order:' + o.id),
+          /* มีรูปแล้ว → แตะรูปย่อเพื่อดูเต็มจอ · ยังไม่มี → แตะเพื่อแนบ */
+          pick: (st.images || {})['order:' + o.id]
+            ? () => this.openImg('order:' + o.id, 'รอบสั่ง ' + thDate(o.date) + ' · ' + nf(o.amount) + ' ฿')
+            : () => this.pickImage('order:' + o.id),
+          change: () => this.pickImage('order:' + o.id),
+          changeStyle: {
+            border: 'none', background: 'transparent', color: '#C4BEB4',
+            width: 30, height: 34, fontSize: 12, lineHeight: 1, cursor: 'pointer', flex: 'none',
+            display: (st.images || {})['order:' + o.id] ? 'block' : 'none'
+          },
           clearImg: () => this.removeImage('order:' + o.id),
           thumbLabel: (st.images || {})['order:' + o.id] ? '' : '＋ รูป',
           thumbStyle: (() => {
