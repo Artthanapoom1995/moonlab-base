@@ -591,13 +591,30 @@
 
         <div style="background:#FFFDFA;border:1px solid #EBE7DF;border-radius:16px;padding:clamp(16px,3vw,22px) clamp(16px,3.2vw,24px)">
           <div style="font-size:13.5px;font-weight:500;margin-bottom:4px">สูตรแพคต่อหมวดสินค้า</div>
-          <div style="font-size:11.5px;font-weight:300;color:#A19A8E;margin-bottom:16px">ขาย 1 ชิ้นในหมวดนี้ ระบบจะตัดอุปกรณ์ตามรายการนี้ · กด + − เพื่อแก้จำนวน หรือเลือกอุปกรณ์เพิ่มเข้าสูตร</div>
+          <div style="font-size:11.5px;font-weight:300;color:#A19A8E;margin-bottom:14px">ขาย 1 ชิ้นในหมวดนี้ ระบบจะตัดอุปกรณ์ตามรายการนี้ · กด + − เพื่อแก้จำนวน หรือเลือกอุปกรณ์เพิ่มเข้าสูตร</div>
+
+          <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:12px 13px;background:#FBF9F5;border:1px solid #E8E4DB;border-radius:12px;margin-bottom:6px">
+            <input value="{{ newCat }}" onChange="{{ onNewCat }}" placeholder="ชื่อหมวดใหม่ เช่น เข็มกลัด" style="flex:1;min-width:150px;border:1px solid #E0DBD2;background:#FFFDFA;border-radius:9px;padding:9px 11px;font-size:13px" />
+            <button onClick="{{ addCat }}" style="border:none;background:#1B1A18;color:#F6F4F0;border-radius:9px;padding:10px 16px;font-size:12.5px;font-weight:500;cursor:pointer;flex:none" style-hover="background:#332F2A">เพิ่มหมวด</button>
+          </div>
+          <div style="font-size:11px;font-weight:300;color:#B4675C;min-height:15px;margin-bottom:6px">{{ catNote }}</div>
+
+          <div style="{{ missingCatStyle }}">
+            <div style="font-size:11.5px;font-weight:400;color:#8C867C;margin-bottom:8px">หมวดที่มีสินค้าอยู่แล้วแต่ยังไม่มีสูตรแพค — แตะเพื่อเพิ่ม</div>
+            <div style="display:flex;flex-wrap:wrap;gap:7px">
+              <sc-for list="{{ missingCats }}" as="m" hint-placeholder-count="2">
+                <button onClick="{{ m.add }}" style="border:1px dashed #D9B36A;background:#FDFBF6;color:#8A6E33;border-radius:999px;padding:6px 13px;font-size:12px;font-weight:400;cursor:pointer" style-hover="background:#F7F1E4">+ {{ m.name }} ({{ m.count }})</button>
+              </sc-for>
+            </div>
+          </div>
           <sc-for list="{{ ruleRows }}" as="r" hint-placeholder-count="7">
             <div style="padding:14px 0;border-top:1px solid #F2EFE8">
               <div style="display:flex;flex-wrap:wrap;align-items:baseline;gap:10px;margin-bottom:10px">
                 <div style="font-size:12.5px;font-weight:500">{{ r.cat }}</div>
+                <div style="font-size:11px;font-weight:300;color:#A19A8E">{{ r.useCount }}</div>
                 <div style="flex:1"></div>
                 <div style="font-size:12px;font-weight:400;color:#8C867C">{{ r.cost }}</div>
+                <button onClick="{{ r.delCat }}" title="ลบหมวดนี้" style="{{ r.delCatStyle }}">{{ r.delCatLabel }}</button>
               </div>
               <div style="display:flex;flex-wrap:wrap;gap:7px;align-items:center">
                 <sc-for list="{{ r.items }}" as="it" hint-placeholder-count="5">
@@ -1187,7 +1204,8 @@ class Component extends DCLogic {
     fees: {},  /* ค่าคอมฯ ที่ร้านตั้งเอง แยกตามช่องทาง — ว่าง = ใช้ค่าตั้งต้นใน CHANNELS */
     editSaleId: '', editDraft: {}, resetArm: false,
     images: {},        /* รูปอุปกรณ์แพค: ชื่อ → รูปย่อแล้ว เก็บบนคลาวด์เหมือนข้อมูลอื่น */
-    dragIdx: -1, imgBusy: '', numDraft: {}
+    dragIdx: -1, imgBusy: '', numDraft: {},
+    newCat: '', catNote: '', catArm: ''
   };
 
   /* ---- รูปอุปกรณ์แพค ---- */
@@ -1513,7 +1531,43 @@ class Component extends DCLogic {
 
   byId(id) { return this.state.products.find(p => p.id === id); }
   rules() { return this.state.rules || RULES; }
-  rule(cat) { return this.rules()[cat] || { 'ถุงซิป': 1, 'ซองแบรนด์ Moonlab': 1, 'การ์ดขอบคุณ': 1, 'สติกเกอร์': 1 }; }
+  /* หมวดที่ยังไม่มีสูตร = ไม่ตัดอุปกรณ์ ตรงกับที่เห็นบนหน้าจอ
+     (เดิมมีสูตรลับซ่อนไว้ อ้างถึงอุปกรณ์ที่ร้านอาจลบทิ้งแล้ว ถ้าวันหลังสร้างชื่อซ้ำจะโดนตัดขึ้นมาเอง) */
+  rule(cat) { return this.rules()[cat] || {}; }
+  /* ---- เพิ่ม/ลบหมวดสินค้าของร้าน ---- */
+  addCat = () => {
+    const name = String(this.state.newCat || '').trim();
+    if (!name) return;
+    const rules = { ...this.rules() };
+    if (rules[name]) return this.setState({ catNote: 'มีหมวด "' + name + '" อยู่แล้ว' });
+    rules[name] = {};
+    this.set({ rules, newCat: '', catNote: '' });
+  };
+
+  addCatNamed(name) {
+    const rules = { ...this.rules() };
+    if (rules[name]) return;
+    rules[name] = {};
+    this.set({ rules, catNote: '' });
+  }
+
+  delCat(cat) {
+    if (this.state.catArm !== cat) {
+      this.setState({ catArm: cat });
+      clearTimeout(this._catT);
+      this._catT = setTimeout(() => this.setState({ catArm: '' }), 5000);
+      return;
+    }
+    clearTimeout(this._catT);
+    const rules = { ...this.rules() };
+    delete rules[cat];
+    const n = this.state.products.filter(p => p.cat === cat).length;
+    this.set({
+      rules, catArm: '',
+      catNote: n ? 'ลบสูตรของหมวด "' + cat + '" แล้ว · สินค้า ' + n + ' รายการยังอยู่ครบ แต่จะไม่ถูกตัดค่าแพคจนกว่าจะเพิ่มหมวดกลับ' : ''
+    });
+  }
+
   setRule(cat, name, n) {
     const rules = { ...this.rules() };
     const r = { ...(rules[cat] || {}) };
@@ -2575,11 +2629,34 @@ class Component extends DCLogic {
           del: () => this.delPkg(p.name)
         };
       }),
+      newCat: st.newCat || '',
+      onNewCat: e => this.setState({ newCat: e.target.value, catNote: '' }),
+      addCat: this.addCat,
+      catNote: st.catNote || '',
+      missingCats: (() => {
+        const rules = this.rules();
+        const seen = {};
+        P.forEach(p => { if (p.cat && !rules[p.cat]) seen[p.cat] = (seen[p.cat] || 0) + 1; });
+        return Object.keys(seen).map(name => ({ name, count: seen[name], add: () => this.addCatNamed(name) }));
+      })(),
+      missingCatStyle: (() => {
+        const rules = this.rules();
+        const any = P.some(p => p.cat && !rules[p.cat]);
+        return any ? 'padding:12px 13px;background:#FDFBF6;border:1px solid #EDE3CD;border-radius:12px;margin-bottom:8px' : 'display:none';
+      })(),
+
       ruleRows: Object.keys(this.rules()).map(c => {
         const r = this.rules()[c];
         const spare = st.pkg.map(p => p.name).filter(n => !r[n]);
+        const inCat = P.filter(p => p.cat === c).length;
+        const armed = st.catArm === c;
         return {
           cat: c,
+          useCount: inCat ? '· สินค้า ' + inCat + ' รายการ' : '· ยังไม่มีสินค้าในหมวดนี้',
+          delCat: () => this.delCat(c),
+          delCatLabel: armed ? 'แน่ใจ? กดอีกครั้ง' : 'ลบหมวด',
+          delCatStyle: 'border:1px solid ' + (armed ? RED : '#E8E4DB') + ';background:' + (armed ? RED + '12' : 'transparent')
+            + ';color:' + (armed ? RED : '#A19A8E') + ';border-radius:8px;padding:4px 10px;font-size:11px;font-weight:400;cursor:pointer;white-space:nowrap;flex:none',
           items: Object.keys(r).map(k => ({
             name: k, n: r[k],
             plus: () => this.setRule(c, k, r[k] + 1),
