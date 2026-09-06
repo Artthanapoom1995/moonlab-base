@@ -332,7 +332,7 @@
                 </div>
                 <div style="display:flex;align-items:center;gap:10px;margin-top:12px;padding:11px 13px;background:#FDFCF9;border:1px solid #E8E4DB;border-radius:10px">
                   <div style="font-size:11.5px;font-weight:400;color:#9A9388;flex:1;min-width:0">ค่าคอมฯ {{ feeChannel }}</div>
-                  <input value="{{ feeValue }}" onChange="{{ onFee }}" inputmode="decimal" placeholder="0" style="width:66px;border:1px solid #E0DBD2;background:#FFFDFA;border-radius:8px;padding:9px 10px;font-size:14px;text-align:right" />
+                  <input value="{{ feeValue }}" onChange="{{ onFee }}" onBlur="{{ onFeeBlur }}" inputmode="decimal" placeholder="0" style="width:66px;border:1px solid #E0DBD2;background:#FFFDFA;border-radius:8px;padding:9px 10px;font-size:14px;text-align:right" />
                   <div style="font-size:13px;font-weight:400;color:#8C867C">%</div>
                 </div>
                 <div style="font-size:11px;font-weight:300;color:#A19A8E;margin-top:6px;line-height:1.5">{{ feeNote }}</div>
@@ -495,7 +495,7 @@
               <span style="font-size:12.5px;font-weight:300;color:#6E6860;text-align:right">{{ s.sold }}</span>
               <div style="display:flex;justify-content:flex-end;align-items:center;gap:7px">
                 <span style="width:6px;height:6px;border-radius:50%;background:{{ s.dot }};flex:none"></span>
-                <input value="{{ s.stock }}" onChange="{{ s.onStock }}" inputmode="numeric" style="width:62px;border:1px solid #E8E3DA;background:#FDFCF9;border-radius:8px;padding:6px 8px;font-size:12.5px;text-align:right" />
+                <input value="{{ s.stock }}" onChange="{{ s.onStock }}" onBlur="{{ s.onStockBlur }}" inputmode="numeric" style="width:62px;border:1px solid #E8E3DA;background:#FDFCF9;border-radius:8px;padding:6px 8px;font-size:12.5px;text-align:right" />
               </div>
               <div style="display:flex;gap:5px;flex:none">
                 <button onClick="{{ s.editName }}" title="แก้ไขชื่อ" style="border:1px solid #E4E0D8;background:#FBF9F5;color:#6E6860;border-radius:8px;width:36px;height:36px;font-size:14px;line-height:1;cursor:pointer;padding:0" style-hover="background:#F1EEE7">✎</button>
@@ -565,14 +565,14 @@
                   <div style="font-size:10.5px;font-weight:300;color:#A19A8E;margin-top:3px">{{ p.note }}</div>
                 </div>
                 <div style="display:flex;align-items:baseline;gap:6px">
-                  <input value="{{ p.cost }}" onChange="{{ p.onCost }}" inputmode="decimal" style="width:58px;border:1px solid #E8E3DA;background:#FDFCF9;border-radius:8px;padding:5px 8px;font-size:12.5px;text-align:right" />
+                  <input value="{{ p.cost }}" onChange="{{ p.onCost }}" onBlur="{{ p.onCostBlur }}" inputmode="decimal" style="width:58px;border:1px solid #E8E3DA;background:#FDFCF9;border-radius:8px;padding:5px 8px;font-size:12.5px;text-align:right" />
                   <span style="font-size:11px;font-weight:300;color:#A19A8E">บาท/ชิ้น</span>
                   <div style="flex:1"></div>
                   <span style="font-size:11px;font-weight:300;color:#A19A8E">ใช้ {{ p.used }}</span>
                 </div>
                 <div style="display:flex;align-items:center;gap:5px;margin-top:auto">
                   <button onClick="{{ p.minus }}" style="border:1px solid #E8E3DA;background:#FBF9F5;color:#6E6860;border-radius:9px;width:30px;height:30px;font-size:15px;line-height:1;cursor:pointer;flex:none" style-hover="background:#F1EEE7">−</button>
-                  <input value="{{ p.stock }}" onChange="{{ p.onStock }}" inputmode="numeric" style="flex:1;min-width:0;border:1px solid #E8E3DA;background:#FDFCF9;border-radius:9px;padding:7px 8px;font-size:13px;text-align:center" />
+                  <input value="{{ p.stock }}" onChange="{{ p.onStock }}" onBlur="{{ p.onStockBlur }}" inputmode="numeric" style="flex:1;min-width:0;border:1px solid #E8E3DA;background:#FDFCF9;border-radius:9px;padding:7px 8px;font-size:13px;text-align:center" />
                   <button onClick="{{ p.plus }}" style="border:1px solid #E8E3DA;background:#FBF9F5;color:#6E6860;border-radius:9px;width:30px;height:30px;font-size:15px;line-height:1;cursor:pointer;flex:none" style-hover="background:#F1EEE7">+</button>
                 </div>
               </div>
@@ -656,10 +656,10 @@
                 <div style="font-size:10.5px;font-weight:300;color:#A19A8E">{{ i.meta }}</div>
               </div>
               <div style="display:flex;justify-content:flex-end">
-                <input value="{{ i.price }}" onChange="{{ i.onPrice }}" inputmode="numeric" style="width:70px;border:1px solid #E8E3DA;background:#FDFCF9;border-radius:8px;padding:6px 8px;font-size:12.5px;text-align:right" />
+                <input value="{{ i.price }}" onChange="{{ i.onPrice }}" onBlur="{{ i.onPriceBlur }}" inputmode="decimal" style="width:70px;border:1px solid #E8E3DA;background:#FDFCF9;border-radius:8px;padding:6px 8px;font-size:12.5px;text-align:right" />
               </div>
               <div style="display:flex;justify-content:flex-end">
-                <input value="{{ i.cost }}" onChange="{{ i.onCost }}" inputmode="numeric" style="width:70px;border:1px solid #E8E3DA;background:#FDFCF9;border-radius:8px;padding:6px 8px;font-size:12.5px;text-align:right" />
+                <input value="{{ i.cost }}" onChange="{{ i.onCost }}" onBlur="{{ i.onCostBlur }}" inputmode="decimal" style="width:70px;border:1px solid #E8E3DA;background:#FDFCF9;border-radius:8px;padding:6px 8px;font-size:12.5px;text-align:right" />
               </div>
               <span style="font-size:12.5px;font-weight:300;color:#8C867C;text-align:right">{{ i.pkg }}</span>
               <span style="font-size:13px;font-weight:500;text-align:right;color:{{ i.color }}">{{ i.margin }}</span>
@@ -1187,7 +1187,7 @@ class Component extends DCLogic {
     fees: {},  /* ค่าคอมฯ ที่ร้านตั้งเอง แยกตามช่องทาง — ว่าง = ใช้ค่าตั้งต้นใน CHANNELS */
     editSaleId: '', editDraft: {}, resetArm: false,
     images: {},        /* รูปอุปกรณ์แพค: ชื่อ → รูปย่อแล้ว เก็บบนคลาวด์เหมือนข้อมูลอื่น */
-    dragIdx: -1, imgBusy: ''
+    dragIdx: -1, imgBusy: '', numDraft: {}
   };
 
   /* ---- รูปอุปกรณ์แพค ---- */
@@ -1289,7 +1289,7 @@ class Component extends DCLogic {
     const s = String(v).trim();
     if (s === '') delete fees[name];                       /* ล้างช่อง = กลับไปใช้ค่าตั้งต้น */
     else fees[name] = Math.max(0, Math.min(100, num(s)));  /* กันพิมพ์เกิน 100% หรือติดลบ */
-    this.set({ fees });
+    this.set({ fees, numDraft: this.withDraft('fee:' + name, v) });
   }
 
   addLedger = () => {
@@ -1358,6 +1358,7 @@ class Component extends DCLogic {
   };
   delPkg(name) { this.set({ pkg: this.state.pkg.filter(p => p.name !== name) }); }
   bumpPkg(name, d) {
+    this.dropDraft('pkg:stock:' + name);   /* ปุ่ม + − ต้องชนะข้อความที่ค้างอยู่ในช่อง */
     this.set({ pkg: this.state.pkg.map(p => p.name === name ? { ...p, stock: Math.max(0, p.stock + d) } : p) });
   }
 
@@ -2030,8 +2031,35 @@ class Component extends DCLogic {
     setTimeout(() => this.setState({ okBanner: '' }), 4000);
   };
 
+  /* ---- ช่องกรอกตัวเลข ----
+     ถ้าผูกช่องกับตัวเลขที่แปลงแล้วตรงๆ พอพิมพ์ "2." ระบบจะแปลงเป็น 2 ทันที
+     จุดทศนิยมหายทุกครั้ง พิมพ์ 2.5 ไม่ได้เลย และลบให้ว่างเพื่อพิมพ์ใหม่ก็ไม่ได้ (กลายเป็น 0)
+     จึงเก็บข้อความดิบที่กำลังพิมพ์ไว้ชั่วคราว แล้วล้างทิ้งเมื่อออกจากช่อง */
+  draftVal(key, actual) {
+    const d = this.state.numDraft || {};
+    return d[key] !== undefined ? d[key] : String(actual);
+  }
+  withDraft(key, v) {
+    const d = { ...(this.state.numDraft || {}) };
+    d[key] = v;
+    return d;
+  }
+  clearDraft = key => () => {
+    const d = { ...(this.state.numDraft || {}) };
+    if (!(key in d)) return;
+    delete d[key];
+    this.setState({ numDraft: d });
+  };
+  dropDraft(key) {
+    const d = { ...(this.state.numDraft || {}) };
+    if (key in d) { delete d[key]; this.setState({ numDraft: d }); }
+  }
+
   editProduct(id, field, v) {
-    this.set({ products: this.state.products.map(p => p.id === id ? { ...p, [field]: Math.max(0, num(v)) } : p) });
+    this.set({
+      numDraft: this.withDraft('p:' + field + ':' + id, v),
+      products: this.state.products.map(p => p.id === id ? { ...p, [field]: Math.max(0, num(v)) } : p)
+    });
   }
   openEditName(id) {
     const p = this.byId(id);
@@ -2057,7 +2085,10 @@ class Component extends DCLogic {
   };
   cancelEdit = () => this.setState({ editingId: '', editingField: '', editingValue: '' });
   editPkg(name, field, v) {
-    this.set({ pkg: this.state.pkg.map(p => p.name === name ? { ...p, [field]: Math.max(0, num(v)) } : p) });
+    this.set({
+      numDraft: this.withDraft('pkg:' + field + ':' + name, v),
+      pkg: this.state.pkg.map(p => p.name === name ? { ...p, [field]: Math.max(0, num(v)) } : p)
+    });
   }
 
   exportCsv = () => {
@@ -2246,7 +2277,8 @@ class Component extends DCLogic {
         go: () => this.setState({ ch: c.name })
       })),
       feeChannel: ch.name,
-      feeValue: (st.fees || {})[ch.name] !== undefined ? String((st.fees || {})[ch.name]) : String(chFee),
+      feeValue: this.draftVal('fee:' + ch.name, (st.fees || {})[ch.name] !== undefined ? (st.fees || {})[ch.name] : chFee),
+      onFeeBlur: this.clearDraft('fee:' + ch.name),
       onFee: e => this.setFee(ch.name, e.target.value),
       feeNote: 'ปรับได้เมื่อแพลตฟอร์มเปลี่ยนอัตรา · ยอดขายที่บันทึกไปแล้วยังใช้ % เดิมของวันนั้น · เว้นว่างเพื่อกลับไปใช้ค่าตั้งต้น ' + ((CHANNELS.find(c => c.name === ch.name) || {}).fee || 0) + '%',
       catFilters: cats.map(c => ({ label: c, style: pill(st.cat === c), go: () => this.setState({ cat: c }) })),
@@ -2475,7 +2507,9 @@ class Component extends DCLogic {
         { label: 'หมดสต็อก', value: nf(P.filter(p => p.stock <= 0).length), color: RED }
       ],
       stockRows: filtered.slice(0, 60).map(p => ({
-        name: p.short, variant: p.variant || '—', cat: p.cat, sold: (sold30[p.id] || 0) + ' ชิ้น', stock: p.stock,
+        name: p.short, variant: p.variant || '—', cat: p.cat, sold: (sold30[p.id] || 0) + ' ชิ้น',
+        stock: this.draftVal('p:stock:' + p.id, p.stock),
+        onStockBlur: this.clearDraft('p:stock:' + p.id),
         dot: p.stock <= 0 ? RED : p.stock <= THRESHOLD ? AMBER : GREEN,
         onStock: e => this.editProduct(p.id, 'stock', e.target.value),
         editName: () => this.openEditName(p.id),
@@ -2503,7 +2537,12 @@ class Component extends DCLogic {
         const img = (st.images || {})[p.name] || '';
         const used = Object.keys(this.rules()).filter(c => this.rules()[c][p.name]).length;
         return {
-          name: p.name, cost: p.cost, stock: p.stock, used: nf(pkgUsed[p.name] || 0) + ' ชิ้น',
+          name: p.name,
+          cost: this.draftVal('pkg:cost:' + p.name, p.cost),
+          stock: this.draftVal('pkg:stock:' + p.name, p.stock),
+          onCostBlur: this.clearDraft('pkg:cost:' + p.name),
+          onStockBlur: this.clearDraft('pkg:stock:' + p.name),
+          used: nf(pkgUsed[p.name] || 0) + ' ชิ้น',
           stockLabel: p.stock + ' ชิ้น',
           note: used ? 'ใช้ในหมวด ' + used + ' หมวด' : 'อุปกรณ์เสริม · ยังไม่อยู่ในสูตรแพค',
           dot: p.stock <= 15 ? RED : p.stock <= 40 ? AMBER : GREEN,
@@ -2558,7 +2597,11 @@ class Component extends DCLogic {
         const m = p.price - p.cost - pk - p.price * 0.08;
         return {
           name: p.short, meta: p.cat + (p.variant ? ' · ' + p.variant : ''),
-          price: p.price, cost: p.cost, pkg: nf1(pk) + ' ฿',
+          price: this.draftVal('p:price:' + p.id, p.price),
+          cost: this.draftVal('p:cost:' + p.id, p.cost),
+          onPriceBlur: this.clearDraft('p:price:' + p.id),
+          onCostBlur: this.clearDraft('p:cost:' + p.id),
+          pkg: nf1(pk) + ' ฿',
           margin: nf(m) + ' ฿', color: m > 0 ? GREEN : RED,
           onPrice: e => this.editProduct(p.id, 'price', e.target.value),
           onCost: e => this.editProduct(p.id, 'cost', e.target.value),
