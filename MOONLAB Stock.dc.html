@@ -234,12 +234,12 @@
           <div style="background:#FFFDFA;border:1px solid #EBE7DF;border-radius:16px;padding:clamp(16px,3vw,20px) clamp(16px,3.2vw,24px)">
             <div style="display:flex;flex-wrap:wrap;align-items:center;gap:14px">
               <div style="flex:1;min-width:180px">
-                <div style="font-size:13.5px;font-weight:500;margin-bottom:4px">Excel ข้อมูล TikTok</div>
-                <div style="font-size:11.5px;font-weight:300;color:#A19A8E;text-wrap:pretty">อัพโหลดรายงานยอดขาย ออกแบบในตัวอัตโนมัติ</div>
+                <div style="font-size:13.5px;font-weight:500;margin-bottom:4px">Excel คำสั่งซื้อ TikTok</div>
+                <div style="font-size:11.5px;font-weight:300;color:#A19A8E;text-wrap:pretty">ไฟล์ "ทั้งหมด คำสั่งซื้อ" · จับคู่ด้วย SKU รายสี ข้ามรายการยกเลิก และไม่ตัดสต็อก (เป็นประวัติย้อนหลัง)</div>
               </div>
               <label style="border:1px dashed #25F4EE;background:#F0FFFE;border-radius:11px;padding:11px 16px;font-size:12px;font-weight:500;cursor:pointer;color:#0A5A56;flex:none" style-hover="background:#D4F9F7">
                 📊 Excel
-                <input type="file" accept=".xlsx,.xls" onChange="{{ onTiktokExcel }}" style="display:none" />
+                <input type="file" accept=".xlsx,.xls" onChange="{{ onOrdersExcel }}" style="display:none" />
               </label>
             </div>
             <div style="font-size:11.5px;font-weight:300;color:#8C867C;margin-top:10px;min-height:15px">{{ excelNote }}</div>
@@ -1864,6 +1864,101 @@ class Component extends DCLogic {
     reader.readAsArrayBuffer(file);
   };
 
+  /* ---- นำเข้าประวัติคำสั่งซื้อจาก TikTok (ชีต OrderSKUList) ----
+     บันทึกเป็นประวัติการขายอย่างเดียว ไม่ตัดสต็อก เพราะจำนวนที่ร้านนับไว้ตอนนี้
+     สะท้อนการขายเหล่านี้ไปแล้ว ถ้าตัดซ้ำสต็อกจะติดลบทั้งร้าน */
+  onOrdersExcel = e => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    this.setState({ excelNote: 'กำลังอ่าน ' + file.name + ' …' });
+    const reader = new FileReader();
+    reader.onload = async ev => {
+      try {
+        const wb = await this.parseXlsx(ev.target?.result);
+        const ws = wb[Object.keys(wb)[0]] || [];
+        let hi = -1;
+        for (let i = 0; i < Math.min(10, ws.length); i++) {
+          if ((ws[i] || []).some(c => /^order id$/i.test(String(c || '').trim()))) { hi = i; break; }
+        }
+        if (hi < 0) throw new Error('ไม่ใช่ไฟล์คำสั่งซื้อของ TikTok (ไม่พบคอลัมน์ Order ID)');
+        const H = (ws[hi] || []).map(c => String(c || '').trim());
+        const at = re => H.findIndex(h => re.test(h));
+        const iOid = at(/^order id$/i), iStatus = at(/^order status$/i), iSku = at(/^sku id$/i);
+        const iName = at(/^product name$/i), iVar = at(/^variation$/i), iQty = at(/^quantity$/i);
+        const iUnit = at(/^sku unit original price$/i), iNet = at(/^sku subtotal after discount$/i);
+        const iTime = at(/^created time$/i), iCat = at(/^product category$/i);
+        if (iSku < 0 || iQty < 0) throw new Error('ไฟล์นี้ไม่มีคอลัมน์ SKU ID หรือ Quantity');
+
+        const cell = (r, i) => i >= 0 ? String(r[i] === undefined || r[i] === null ? '' : r[i]).trim() : '';
+        /* ไฟล์นี้เขียนวันที่แบบ 20/02/2026 21:55:06 — วัน/เดือน/ปี */
+        const toDate = s => {
+          const m = /^(\d{1,2})\/(\d{1,2})\/(\d{4})/.exec(String(s || '').trim());
+          if (!m) return this.xlsxDate(s);
+          return m[3] + '-' + ('0' + m[2]).slice(-2) + '-' + ('0' + m[1]).slice(-2);
+        };
+
+        let products = this.state.products.slice();
+        const bySku = {};
+        products.forEach(p => { bySku[String(p.id)] = p; });
+        const done = {};
+        (this.state.sales || []).forEach(s => { if (s.oid) done[s.oid + ':' + s.sku] = 1; });
+
+        const sales = [];
+        let cancelled = 0, dup = 0, created = 0, bad = 0;
+        for (let i = hi + 1; i < ws.length; i++) {
+          const row = ws[i] || [];
+          const sku = cell(row, iSku), oid = cell(row, iOid);
+          const date = toDate(cell(row, iTime));
+          if (!sku || !oid || !date) { bad++; continue; }
+          const status = cell(row, iStatus);
+          if (/ยกเลิก|cancel/i.test(status)) { cancelled++; continue; }
+          if (done[oid + ':' + sku]) { dup++; continue; }
+          const qty = Math.max(1, Math.round(num(cell(row, iQty))) || 1);
+          const net = num(cell(row, iNet));
+          const unit = num(cell(row, iUnit));
+          const price = net > 0 ? net / qty : unit;
+          let p = bySku[sku];
+          if (!p) {
+            /* สินค้าที่เลิกขายไปแล้วไม่มีในคลัง สร้างขึ้นมาให้ยอดขายครบ สต็อก 0 */
+            const nm = cell(row, iName) || ('SKU ' + sku);
+            let variant = cell(row, iVar);
+            if (/^(ค่าเริ่มต้น|default)$/i.test(variant)) variant = '';
+            p = { id: sku, name: nm, short: shortName(nm), cat: cell(row, iCat), variant, price: unit, cost: 0, stock: 0 };
+            products.push(p); bySku[sku] = p; created++;
+          }
+          done[oid + ':' + sku] = 1;
+          sales.push({
+            id: 'tt' + oid + '_' + sku, date, sku, qty, price,
+            disc: 0, ship: 0, ch: 'TikTok Shop', fee: this.chFee('TikTok Shop'), oid
+          });
+        }
+
+        if (!sales.length) {
+          this.setState({ excelNote: 'ไม่มีรายการใหม่ให้บันทึก'
+            + (dup ? ' · นำเข้าไปแล้ว ' + dup + ' รายการ' : '')
+            + (cancelled ? ' · ข้ามรายการยกเลิก ' + cancelled : '') });
+          return;
+        }
+        const units = sales.reduce((a, s) => a + s.qty, 0);
+        const gross = Math.round(sales.reduce((a, s) => a + s.qty * s.price, 0));
+        const dates = sales.map(s => s.date).sort();
+        this.set({ sales: [...(this.state.sales || []), ...sales], products });
+        this.setState({
+          excelNote: 'บันทึกยอดขาย ' + sales.length + ' รายการ (' + units + ' ชิ้น · ' + nf(gross) + ' ฿) · '
+            + thDate(dates[0]) + ' – ' + thDate(dates[dates.length - 1])
+            + (created ? ' · สร้างสินค้าที่เลิกขายแล้ว ' + created + ' รายการ (สต็อก 0)' : '')
+            + (cancelled ? ' · ข้ามรายการยกเลิก ' + cancelled : '')
+            + (dup ? ' · ข้ามที่ซ้ำ ' + dup : '')
+            + ' · ไม่ตัดสต็อก'
+        });
+      } catch (err) {
+        this.setState({ excelNote: 'อ่านไฟล์ไม่สำเร็จ: ' + (err && err.message ? err.message : 'ตรวจสอบรูปแบบไฟล์') });
+      }
+    };
+    reader.readAsArrayBuffer(file);
+  };
+
   onItemsExcel = e => {
     const file = e.target.files?.[0];
     e.target.value = '';
@@ -2061,7 +2156,8 @@ class Component extends DCLogic {
       const localOff = dv.getUint32(ptr + 42, true);
       const name = dec.decode(view.subarray(ptr + 46, ptr + 46 + nameLen));
 
-      if (/^xl\/(worksheets\/sheet1\.xml|sharedStrings\.xml|workbook\.xml)$/.test(name)) {
+      /* เอาทุกชีต ไม่ใช่แค่ sheet1 — บางไฟล์ที่แพลตฟอร์มสร้างมาชีตแรกชื่อ sheet2 */
+      if (/^xl\/(worksheets\/sheet\d+\.xml|sharedStrings\.xml|workbook\.xml)$/.test(name)) {
         const lNameLen = dv.getUint16(localOff + 26, true);
         const lExtraLen = dv.getUint16(localOff + 28, true);
         const start = localOff + 30 + lNameLen + lExtraLen;
@@ -2082,7 +2178,11 @@ class Component extends DCLogic {
 
   async parseXlsx(buf) {
     const files = await this.unzip(buf);
-    const sheet = files['xl/worksheets/sheet1.xml'];
+    /* ชีตแรกไม่จำเป็นต้องชื่อ sheet1 — ไล่เอาเลขน้อยสุดที่มีจริงในไฟล์ */
+    const sheetName = Object.keys(files)
+      .filter(k => /^xl\/worksheets\/sheet\d+\.xml$/.test(k))
+      .sort((a, b) => parseInt(a.replace(/\D/g, ''), 10) - parseInt(b.replace(/\D/g, ''), 10))[0];
+    const sheet = sheetName && files[sheetName];
     if (!sheet) throw new Error('ไม่พบชีตแรกในไฟล์');
 
     const parse = xml => new DOMParser().parseFromString(xml, 'application/xml');
@@ -2110,9 +2210,16 @@ class Component extends DCLogic {
     const err = doc.querySelector('parsererror');
     if (err) throw new Error('อ่าน XML ในไฟล์ไม่ได้');
 
-    const rows = [];
+    /* รวมเซลล์ตามเลขแถวที่เขียนไว้ในแอตทริบิวต์ r ไม่ใช่ตามลำดับ <row> ที่เจอ
+       ไฟล์คำสั่งซื้อของ TikTok เขียนทีละเซลล์โดยห่อ <row> ใหม่ทุกครั้ง ถ้าไล่ตาม element
+       จะได้ 52,000 แถวที่มีช่องเดียว แทนที่จะเป็น 800 แถวเต็มใบ */
+    const byRow = new Map();
+    let seq = 0;
     doc.querySelectorAll('row').forEach(r => {
-      const arr = [];
+      const rn = parseInt(r.getAttribute('r'), 10);
+      const keyR = isNaN(rn) ? 'seq' + (seq++) : rn;
+      let arr = byRow.get(keyR);
+      if (!arr) { arr = []; byRow.set(keyR, arr); }
       r.querySelectorAll('c').forEach(c => {
         const i = colIndex(c.getAttribute('r'));
         const t = c.getAttribute('t');
@@ -2126,9 +2233,15 @@ class Component extends DCLogic {
         }
         arr[i] = v;
       });
-      for (let i = 0; i < arr.length; i++) if (arr[i] === undefined) arr[i] = '';
-      rows.push(arr);
     });
+
+    const rows = [...byRow.entries()]
+      .sort((a, b) => (typeof a[0] === 'number' && typeof b[0] === 'number') ? a[0] - b[0] : 0)
+      .map(e => {
+        const arr = e[1];
+        for (let i = 0; i < arr.length; i++) if (arr[i] === undefined) arr[i] = '';
+        return arr;
+      });
 
     while (rows.length && rows[rows.length - 1].every(c => String(c).trim() === '')) rows.pop();
     if (!rows.length) throw new Error('ไฟล์ว่างเปล่า ไม่มีข้อมูลในชีตแรก');
@@ -2692,7 +2805,7 @@ class Component extends DCLogic {
       onShip: e => this.setState({ ship: e.target.value }),
       onBudget: e => this.setState({ budget: e.target.value }),
       onAd: e => this.set({ adSpend: { ...st.adSpend, [st.date]: num(e.target.value) } }),
-      onTiktokExcel: this.onTiktokExcel,
+      onOrdersExcel: this.onOrdersExcel,
       adToday: st.adSpend[st.date] || '',
       excelNote: st.excelNote,
       ranges: [
