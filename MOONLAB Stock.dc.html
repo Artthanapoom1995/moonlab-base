@@ -500,8 +500,14 @@
             📊 Excel
             <input type="file" accept=".xlsx,.xls" onChange="{{ onItemsExcel }}" style="display:none" />
           </label>
+          <button onClick="{{ toggleReplace }}" title="ใช้เมื่อสินค้ามีหลายสีแล้วอยากแยกสต็อกทีละสี" style="{{ replaceStyle }}">{{ replaceLabel }}</button>
           <div style="flex:1;min-width:180px;font-size:11.5px;font-weight:300;color:#8C867C">{{ itemsExcelNote }}</div>
         </div>
+        <sc-if value="{{ importReplace }}">
+          <div style="background:#FDF6EC;border:1px solid #E4C89A;border-radius:12px;padding:12px 16px;margin-bottom:12px;font-size:11.5px;font-weight:300;color:#7A5E28;text-wrap:pretty">
+            โหมดแยกสีเปิดอยู่ — ไฟล์ที่เลือกจะ<strong style="font-weight:500">แทนที่รายการสินค้าทั้งหมด</strong> โดยแตกเป็นรายการละสีตามข้อมูลใน TikTok · ต้นทุนที่กรอกไว้จะถูกยกมาให้ทุกสี · สต็อกเดิมจะไปรวมที่สีแรกของแต่ละตัวให้ย้ายเอง · ยอดขายที่บันทึกแล้วไม่ถูกแตะต้อง
+          </div>
+        </sc-if>
 
         <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px;align-items:center">
           <input value="{{ pq }}" onChange="{{ onPq }}" placeholder="ค้นหาสินค้า" style="flex:1;min-width:200px;border:1px solid #E0DBD2;background:#FFFDFA;border-radius:10px;padding:10px 13px;font-size:13.5px" />
@@ -1188,7 +1194,7 @@ class Component extends DCLogic {
     range: 7, budget: '20000', toast: '',
     newPkgName: '', newPkgCost: '', newPkgStock: '',
     importRows: [], excelNote: '', importedOrders: [], cart: [], gifts: [], okBanner: '',
-    itemsExcelNote: '',
+    itemsExcelNote: '', importReplace: false,
     editingId: '', editingField: '', editingValue: '', draftNewId: '',
     tasks: [], newTaskText: '', newTaskTime: '',
     orders: [], newOrderDate: today(), newOrderAmount: '', newOrderNote: '',
@@ -1862,6 +1868,16 @@ class Component extends DCLogic {
     const file = e.target.files?.[0];
     e.target.value = '';
     if (!file) return;
+    /* โหมดแยกสีเขียนทับรายการสินค้าทั้งหมด ย้อนไม่ได้ จึงถามยืนยันก่อนอ่านไฟล์ */
+    if (this.state.importReplace) {
+      const n = this.state.products.length;
+      const ok = window.confirm('แทนที่รายการสินค้าทั้งหมด ' + n + ' รายการ ด้วยรายการแยกสีจากไฟล์นี้?\n\n'
+        + '• ต้นทุนที่เคยกรอกไว้จะถูกยกมาให้ทุกสีของสินค้าตัวเดียวกัน\n'
+        + '• สต็อกเดิมจะไปรวมอยู่ที่สีแรกของแต่ละตัว แล้วค่อยย้ายเอง\n'
+        + '• ยอดขายที่บันทึกไปแล้วจะไม่ถูกแตะต้อง\n\n'
+        + 'กด OK เพื่อดำเนินการต่อ');
+      if (!ok) { this.setState({ itemsExcelNote: 'ยกเลิกแล้ว — ข้อมูลเดิมยังอยู่ครบ' }); return; }
+    }
     this.setState({ itemsExcelNote: 'กำลังอ่านไฟล์ ' + file.name + ' …' });
     const reader = new FileReader();
     reader.onload = async ev => {
@@ -1889,8 +1905,10 @@ class Component extends DCLogic {
         const costIdx = col(/cost|ต้นทุน|ทุน|cogs/i, 2);
         const stockIdx = col(/stock|คงเหลือ|สต็อก|จำนวน|qty|quantity/i, -1);
         const catIdx = col(/cat|หมวด|ประเภท|category/i, -1);
-        const varIdx = col(/variant|ตัวเลือก|รุ่นย่อย|สี|แบบ/i, -1);
-        const skuIdx = col(/^sku$|รหัสสินค้า|รหัส/i, -1);
+        /* TikTok ตั้งชื่อคอลัมน์ว่า variation_value / sku_id — คำว่า variant กับ ^sku$ จับไม่ติด
+           ทำให้สีของสินค้าหายไปทั้งไฟล์ และทุกสีถูกยุบรวมเป็นรายการเดียว */
+        const varIdx = col(/variant|variation|ตัวเลือก|รุ่นย่อย|สี|แบบ/i, -1);
+        const skuIdx = col(/^sku_?id$|^sku$|^รหัสสินค้า$|รหัส/i, -1);
 
         const cell = (row, i) => i >= 0 ? String(row[i] === undefined || row[i] === null ? '' : row[i]).trim() : '';
         const key = s => normTh(String(s || '')).toLowerCase();
@@ -1898,18 +1916,74 @@ class Component extends DCLogic {
         let products = this.state.products.slice();
         let updated = 0, added = 0, noCost = 0, skipped = 0;
 
+        /* อ่านทุกบรรทัดออกมาก่อน แล้วค่อยตัดสินว่าจะอัพเดททับของเดิม หรือสร้างรายการใหม่ทั้งชุด */
+        const parsed = [];
         for (let i = headerRow + 1; i < ws.length; i++) {
           const row = ws[i] || [];
           const name = cell(row, nameIdx);
           if (!name) continue;
-          /* กันบรรทัดคำอธิบาย/เงื่อนไขที่ปนมาในเทมเพลต ไม่ให้กลายเป็นสินค้า */
-          if (name.length > 120 || /[\n•]/.test(name)) { skipped++; continue; }
-          const price = num(row[priceIdx]);
-          const cost = num(row[costIdx]);
-          const variant = cell(row, varIdx);
-          const cat = cell(row, catIdx);
-          const sku = cell(row, skuIdx);
-          const stock = stockIdx >= 0 ? Math.max(0, Math.round(num(row[stockIdx]))) : null;
+          /* กันบรรทัดคำอธิบาย/เงื่อนไขที่ปนมาในเทมเพลต ไม่ให้กลายเป็นสินค้า
+             ใช้ 255 ตามเพดานชื่อสินค้าของแพลตฟอร์ม — เกณฑ์เดิม 120 ตัดสินค้าจริงทิ้งไปเกือบครึ่งไฟล์ */
+          if (name.length > 255 || /[\n•]/.test(name)) { skipped++; continue; }
+          let variant = cell(row, varIdx);
+          /* "ค่าเริ่มต้น" คือสินค้าที่ไม่มีตัวเลือกย่อย ไม่ใช่ชื่อสี */
+          if (/^(ค่าเริ่มต้น|default)$/i.test(variant)) variant = '';
+          parsed.push({
+            i, name, variant,
+            price: num(row[priceIdx]),
+            cost: num(row[costIdx]),
+            cat: cell(row, catIdx),
+            sku: cell(row, skuIdx),
+            stock: stockIdx >= 0 ? Math.max(0, Math.round(num(row[stockIdx]))) : null
+          });
+        }
+
+        if (this.state.importReplace) {
+          /* โหมดแยกสี: สร้างรายการสินค้าใหม่ทั้งชุดจากไฟล์ หนึ่งบรรทัด = หนึ่งสี
+             ยกต้นทุนเดิมมาให้ทุกสีของสินค้าตัวเดียวกัน (ไฟล์ TikTok ไม่มีคอลัมน์ต้นทุน)
+             และยกสต็อกรวมเดิมไปไว้ที่สีแรก เพื่อไม่ให้ยอดรวมหาย แล้วให้ร้านค่อยย้ายเอง */
+          const oldByName = {};
+          this.state.products.forEach(p => { const k = key(p.name); if (!oldByName[k]) oldByName[k] = p; });
+          const stockPlaced = {}, matchedOld = {};
+          const built = [];
+          parsed.forEach(r => {
+            /* บรรทัดหัวตาราง/คำอธิบายในเทมเพลตก็มีข้อความในช่องชื่อเหมือนกัน
+               ใช้ราคาเป็นตัวแยก — สินค้าจริงต้องมีราคาขาย */
+            if (!(r.price > 0)) { skipped++; return; }
+            const k = key(r.name);
+            const old = oldByName[k];
+            const carry = old && !stockPlaced[k];
+            if (old) { stockPlaced[k] = true; matchedOld[k] = true; }
+            built.push({
+              id: r.sku || ('x' + Date.now() + '_' + r.i),
+              name: r.name, short: shortName(r.name), cat: r.cat, variant: r.variant,
+              price: r.price, cost: old ? old.cost : r.cost,
+              stock: carry ? old.stock : 0
+            });
+          });
+          if (!built.length) {
+            this.setState({ itemsExcelNote: 'อ่านไฟล์ไม่พบรายการสินค้า — ยังไม่ได้แก้ไขข้อมูลเดิม (' + file.name + ')' });
+            return;
+          }
+          /* สินค้าเดิมที่ไม่มีในไฟล์ ห้ามหายไปเฉยๆ เพราะสต็อกกับต้นทุนที่นับไว้จะสูญไปด้วย
+             เก็บต่อท้ายไว้ให้ร้านตัดสินใจลบเอง */
+          const kept = this.state.products.filter(p => !matchedOld[key(p.name)]);
+          const products = built.concat(kept);
+          const colours = built.filter(p => p.variant).length;
+          const names = Object.keys(built.reduce((a, p) => { a[key(p.name)] = 1; return a; }, {})).length;
+          this.set({ products, importReplace: false });
+          this.setState({
+            itemsExcelNote: 'แทนที่รายการสินค้าแล้ว · ' + built.length + ' รายการ จาก ' + names
+              + ' สินค้า (แยกสี ' + colours + ' รายการ) · ยกสต็อกเดิมไปไว้ที่สีแรกของแต่ละตัว โปรดตรวจและย้ายจำนวนให้ตรงแต่ละสี'
+              + (kept.length ? ' · เก็บสินค้าเดิมที่ไม่มีในไฟล์ไว้ ' + kept.length + ' รายการ (ลบเองได้ถ้าไม่ใช้แล้ว)' : '')
+              + (skipped ? ' · ข้ามบรรทัดที่ไม่ใช่สินค้า ' + skipped + ' บรรทัด' : '')
+          });
+          return;
+        }
+
+        for (const r of parsed) {
+          const { name, price, cost, variant, cat, sku, stock } = r;
+          const i = r.i;
 
           /* จับคู่ด้วยรหัสสินค้าก่อน แล้วค่อยชื่อ+ตัวเลือกแบบตรงตัว สุดท้ายจึงเดาจากชื่อบางส่วน */
           let match = sku ? products.find(p => String(p.id) === sku) : null;
@@ -3051,6 +3125,13 @@ class Component extends DCLogic {
       }),
 
       onItemsExcel: this.onItemsExcel,
+      importReplace: st.importReplace,
+      toggleReplace: () => this.setState({ importReplace: !st.importReplace, itemsExcelNote: '' }),
+      replaceLabel: (st.importReplace ? '✓ ' : '') + 'แยกสีเป็นรายการแยก',
+      replaceStyle: 'border:1px solid ' + (st.importReplace ? '#C08A3E' : '#E0DBD2')
+        + ';background:' + (st.importReplace ? '#F6E9D4' : '#FFFDFA')
+        + ';color:' + (st.importReplace ? '#7A5E28' : '#6E6860')
+        + ';border-radius:11px;padding:11px 16px;font-size:12px;font-weight:500;cursor:pointer;flex:none;white-space:nowrap',
       itemsExcelNote: st.itemsExcelNote,
 
       planKpis: [
