@@ -8,7 +8,6 @@
 <body>
 <x-dc>
 <helmet>
-<script src="./config.js"></script>
 <script src="./cloud.js"></script>
 <script src="./pwa.js"></script>
 <link rel="manifest" href="./manifest.webmanifest" />
@@ -45,10 +44,10 @@
         <span style="font-size:19px;font-weight:500;letter-spacing:0.16em">MOONLAB</span>
         <span style="font-size:11px;font-weight:300;letter-spacing:0.22em;color:#8C867C;text-transform:uppercase">Stock</span>
       </div>
-      <div style="font-size:12.5px;font-weight:300;color:#8C867C;margin-bottom:30px">ใส่รหัส 3 หลักเพื่อเข้าใช้งาน</div>
+      <div style="font-size:12.5px;font-weight:300;color:#8C867C;margin-bottom:30px">ใส่รหัส 6 หลักเพื่อเข้าใช้งาน</div>
 
       <div style="display:flex;gap:14px;justify-content:center;margin-bottom:14px">
-        <sc-for list="{{ pinDots }}" as="d" hint-placeholder-count="3">
+        <sc-for list="{{ pinDots }}" as="d" hint-placeholder-count="6">
           <div style="{{ d.style }}"></div>
         </sc-for>
       </div>
@@ -343,12 +342,6 @@
                     <button onClick="{{ c.go }}" style="{{ c.style }}">{{ c.label }}</button>
                   </sc-for>
                 </div>
-                <div style="display:flex;align-items:center;gap:10px;margin-top:12px;padding:11px 13px;background:#FDFCF9;border:1px solid #E8E4DB;border-radius:10px">
-                  <div style="font-size:11.5px;font-weight:400;color:#9A9388;flex:1;min-width:0">ค่าคอมฯ {{ feeChannel }}</div>
-                  <input value="{{ feeValue }}" onChange="{{ onFee }}" onBlur="{{ onFeeBlur }}" inputmode="decimal" placeholder="0" style="width:66px;border:1px solid #E0DBD2;background:#FFFDFA;border-radius:8px;padding:9px 10px;font-size:14px;text-align:right" />
-                  <div style="font-size:13px;font-weight:400;color:#8C867C">%</div>
-                </div>
-                <div style="font-size:11px;font-weight:300;color:#A19A8E;margin-top:6px;line-height:1.5">{{ feeNote }}</div>
               </div>
               <div style="font-size:11.5px;font-weight:300;color:#A19A8E;text-align:center;min-height:16px">{{ toast }}</div>
             </div>
@@ -384,6 +377,31 @@
                   <button onClick="{{ c.del }}" style="border:none;background:transparent;color:#C4BEB4;width:34px;height:34px;font-size:15px;line-height:1;cursor:pointer;border-radius:9px;flex:none" style-hover="color:#B4675C">×</button>
                 </div>
               </sc-for>
+              <sc-for list="{{ giftRows }}" as="g" hint-placeholder-count="0">
+                <div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-top:1px solid #F2EFE8">
+                  <div style="flex:1;min-width:0">
+                    <input value="{{ g.name }}" onChange="{{ g.onName }}" placeholder="ของแถมที่ให้ลูกค้า เช่น ถุงผ้า" style="width:100%;border:1px solid #E0DBD2;background:#FFFDFA;border-radius:8px;padding:7px 9px;font-size:12.5px" />
+                    <select value="{{ g.cat }}" onChange="{{ g.onCat }}" style="width:100%;margin-top:5px;border:1px solid #E8E3DA;background:#FDFCF9;border-radius:8px;padding:5px 7px;font-size:10.5px;color:#8C867C">
+                      <sc-for list="{{ g.cats }}" as="o" hint-placeholder-count="2">
+                        <option value="{{ o.id }}">{{ o.label }}</option>
+                      </sc-for>
+                    </select>
+                  </div>
+                  <div style="display:flex;align-items:center;gap:5px;flex:none">
+                    <button onClick="{{ g.minus }}" style="border:1px solid #E4E0D8;background:#FBF9F5;color:#6E6860;border-radius:50%;width:24px;height:24px;font-size:13px;line-height:1;cursor:pointer" style-hover="background:#F1EEE7">−</button>
+                    <span style="font-size:13px;font-weight:500;min-width:16px;text-align:center">{{ g.qty }}</span>
+                    <button onClick="{{ g.plus }}" style="border:1px solid #E4E0D8;background:#FBF9F5;color:#6E6860;border-radius:50%;width:24px;height:24px;font-size:13px;line-height:1;cursor:pointer" style-hover="background:#F1EEE7">+</button>
+                  </div>
+                  <input value="{{ g.price }}" onChange="{{ g.onPrice }}" inputmode="numeric" style="width:62px;border:1px solid #E8E3DA;background:#FDFCF9;border-radius:8px;padding:6px 8px;font-size:12px;text-align:right;flex:none" />
+                  <div style="text-align:right;flex:none;min-width:62px">
+                    <div style="font-size:12.5px;font-weight:400">{{ g.line }}</div>
+                    <div style="font-size:10.5px;font-weight:300;color:{{ g.netColor }}">{{ g.net }}</div>
+                  </div>
+                  <button onClick="{{ g.del }}" style="border:none;background:transparent;color:#C4BEB4;width:34px;height:34px;font-size:15px;line-height:1;cursor:pointer;border-radius:9px;flex:none" style-hover="color:#B4675C">×</button>
+                </div>
+              </sc-for>
+              <button onClick="{{ addGift }}" style="width:100%;border:1px dashed #DCD7CE;background:transparent;color:#8C867C;border-radius:11px;padding:10px;font-size:12px;font-weight:400;cursor:pointer;margin-top:10px" style-hover="background:#F1EEE7;color:#1B1A18">+ ของแถมที่ให้ลูกค้า</button>
+              <div style="font-size:10.5px;font-weight:300;color:#A19A8E;margin-top:6px;line-height:1.5">พิมพ์ชื่อของแถมกับตั้งราคาเอง · แถมฟรีใส่ราคา 0 · ไม่ตัดสต็อกสินค้า แต่ตัดอุปกรณ์แพคตามหมวดที่เลือก</div>
               <sc-if value="{{ cartHas }}">
                 <div>
                   <sc-for list="{{ cartSummary }}" as="s" hint-placeholder-count="0">
@@ -1040,6 +1058,10 @@
 <script type="text/x-dc" data-dc-script data-props="{}">
 const KEY = 'moonlab_stock_v1';
 const LEAD = 15, SAFETY = 7, THRESHOLD = 8;
+/* จำนวนหลักของรหัสเข้าใช้งาน — ต้องยาวเท่ากับ secret APP_PIN ที่ตั้งไว้ใน Worker
+   3 หลักมีแค่ 1,000 แบบ ไล่เดาหมดในไม่กี่วินาที จึงขยับเป็น 6 */
+const PIN_LEN = 6;
+
 const WALLETS = ['กระเป๋า มูนแลป', 'CEO ART', 'CEO MIU'];
 const INK = '#1B1A18', GREEN = '#6F8763', RED = '#B4675C', AMBER = '#C09A54', MUTE = '#8C867C';
 
@@ -1201,7 +1223,7 @@ class Component extends DCLogic {
     qty: '1', price: '', disc: '', ship: '', ch: 'TikTok Shop',
     range: 7, budget: '20000', toast: '',
     newPkgName: '', newPkgCost: '', newPkgStock: '',
-    importRows: [], importNote: '', excelNote: '', importedOrders: [], cart: [], okBanner: '',
+    importRows: [], importNote: '', excelNote: '', importedOrders: [], cart: [], gifts: [], okBanner: '',
     itemsExcelNote: '',
     editingId: '', editingField: '', editingValue: '', draftNewId: '',
     tasks: [], newTaskText: '', newTaskTime: '',
@@ -1209,7 +1231,7 @@ class Component extends DCLogic {
     planShowCats: Object.keys(RULES).reduce((a, c) => ({ ...a, [c]: true }), {}),
     ledger: [], newLedgerDate: today(), newLedgerType: 'income', newLedgerAmount: '', newLedgerNote: '', newLedgerWallet: WALLETS[0],
     xferFrom: WALLETS[0], xferTo: WALLETS[1], xferAmount: '',
-    locked: true, pin: '', pinErr: '',
+    locked: true, pin: "", pinErr: "", pinBusy: false, authChecked: false,
     sync: { state: 'local', msg: '' }, who: '',
     fees: {},  /* ค่าคอมฯ ที่ร้านตั้งเอง แยกตามช่องทาง — ว่าง = ใช้ค่าตั้งต้นใน CHANNELS */
     editSaleId: '', editDraft: {}, resetArm: false,
@@ -1428,33 +1450,66 @@ class Component extends DCLogic {
     this.set({ pkg: this.state.pkg.map(p => p.name === name ? { ...p, stock: Math.max(0, p.stock + d) } : p) });
   }
 
+  /* รหัสถูกตรวจที่ Worker ไม่ใช่ที่นี่ — ไฟล์นี้ไม่รู้ว่ารหัสคืออะไร
+     ต่อให้เปิด view-source ดูก็ไม่เจอ */
   pinPress = n => {
-    const pin = (this.state.pin + n).slice(0, 3);
-    if (pin.length === 3) {
-      if (pin === '777') {
-        try { sessionStorage.setItem('moonlab_unlocked', '1'); } catch (e) { }
-        this.setState({ locked: false, pin: '', pinErr: '' });
-      } else this.setState({ pin: '', pinErr: 'รหัสไม่ถูกต้อง' });
-      return;
-    }
-    this.setState({ pin, pinErr: '' });
+    if (this.state.pinBusy) return;
+    const pin = (this.state.pin + n).slice(0, PIN_LEN);
+    this.setState({ pin, pinErr: "" });
+    if (pin.length === PIN_LEN) this.submitPin(pin);
   };
-  pinClear = () => this.setState({ pin: '', pinErr: '' });
 
-  componentDidMount() {
-    let unlocked = false;
-    try { unlocked = sessionStorage.getItem('moonlab_unlocked') === '1'; } catch (e) { }
-    if (unlocked) this.setState({ locked: false });
-    this.boot();
+  async submitPin(pin) {
+    this.setState({ pinBusy: true });
+    try {
+      const r = await fetch("/api/unlock", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ pin })
+      });
+      if (r.ok) {
+        this.setState({ locked: false, pin: "", pinErr: "", pinBusy: false });
+        this.boot();                              /* ผ่านแล้วค่อยเริ่มดึงข้อมูล */
+        return;
+      }
+      const msg = r.status === 429
+        ? "ใส่รหัสผิดหลายครั้งเกินไป รอสักครู่แล้วลองใหม่"
+        : ((await r.json().catch(() => ({}))).error || "รหัสไม่ถูกต้อง");
+      this.setState({ pin: "", pinErr: msg, pinBusy: false });
+    } catch (e) {
+      this.setState({ pin: "", pinErr: "ต่อเซิร์ฟเวอร์ไม่ได้", pinBusy: false });
+    }
   }
 
-  /* ---- ข้อมูลกลาง: ลำดับคือ cache ในเครื่อง → คลาวด์ → products.json ---- */
+  pinClear = () => this.setState({ pin: "", pinErr: "" });
+
+  /* กลับไปหน้าใส่รหัส — ใช้ตอนเซสชันหมดอายุ หรือกดออกเอง */
+  relock = async () => {
+    try { await fetch("/api/lock", { method: "POST", credentials: "same-origin" }); } catch (e) { }
+    this.setState({ locked: true, pin: "", pinErr: "", pinBusy: false });
+  };
+
+  componentDidMount() {
+    /* ปลดล็อกหรือยัง ให้เซิร์ฟเวอร์เป็นคนตอบ (cookie เป็น HttpOnly หน้าเว็บอ่านเองไม่ได้)
+       เดิมใช้ sessionStorage ซึ่งฝั่งเบราว์เซอร์ตั้งค่าเองได้ จึงกันอะไรไม่ได้เลย */
+    fetch("/api/session", { credentials: "same-origin" })
+      .then(r => r.json())
+      .then(s => {
+        this.setState({ locked: !s.ok, authChecked: true });
+        if (s.ok) this.boot();
+      })
+      .catch(() => this.setState({ locked: true, authChecked: true }));
+  }
+
+  /* ---- ข้อมูลกลาง
+: ลำดับคือ cache ในเครื่อง → คลาวด์ → products.json ---- */
   async boot() {
     const cloud = window.MoonlabCloud;
     const online = !!(cloud && cloud.configure(window.MOONLAB_CONFIG || {}));
     if (cloud) {
       this.setState({ who: cloud.who() });
-      cloud.start({ onRemote: this.onRemote, onStatus: this.onSyncStatus });
+      cloud.start({ onRemote: this.onRemote, onStatus: this.onSyncStatus, onUnauth: this.relock });
     }
 
     /* 1) cache ในเครื่อง — ให้เปิดมาเห็นข้อมูลทันทีแม้เน็ตช้าหรือไม่มีเน็ต
@@ -1568,7 +1623,7 @@ class Component extends DCLogic {
   syncTap = () => {
     const cloud = window.MoonlabCloud;
     if (!cloud) return;
-    if (!cloud.enabled()) { this.setState({ sync: { state: 'local', msg: 'ยังไม่ได้ตั้งค่า config.js' } }); return; }
+    if (!cloud.enabled()) { this.setState({ sync: { state: 'local', msg: 'ยังไม่ได้ตั้งค่า secret ฝั่งเซิร์ฟเวอร์' } }); return; }
     const cur = cloud.who();
     const name = window.prompt('ใครใช้เครื่องนี้? (ชื่อนี้จะติดไปกับข้อมูลที่บันทึก)', cur === 'ไม่ระบุ' ? '' : cur);
     if (name !== null && name.trim()) { cloud.setWho(name.trim()); this.setState({ who: name.trim() }); }
@@ -1721,29 +1776,141 @@ class Component extends DCLogic {
 
   cancelImport = () => this.setState({ importRows: [], importNote: '' });
 
+  /* จับคู่ชื่อสินค้าจากไฟล์กับสินค้าในระบบ
+     ก่อนหน้านี้ฟังก์ชันนี้หายไปทั้งตัว ทั้งที่ onTiktokExcel เรียกใช้
+     ผลคือกดนำเข้าทีไรก็ขึ้น "อ่านไฟล์ไม่สำเร็จ" ทุกครั้ง */
+  matchRows(rows) {
+    const prods = this.state.products || [];
+    const idx = prods.map(p => ({ p, nv: normTh(p.name + ' ' + (p.variant || '')), n: normTh(p.name), t: trigrams(p.name) }));
+
+    return rows.map((r, i) => {
+      const raw = String(r.name || '');
+      const rv = normTh(r.variant || '');
+      const nv = normTh(raw + ' ' + (r.variant || ''));
+
+      let sku = '', sure = false, cands;
+
+      /* 1) ตรงทั้งชื่อและสี */
+      const exact = idx.find(x => x.nv === nv);
+      if (exact) {
+        sku = exact.p.id; sure = true;
+        cands = [exact.p.id].concat(idx.filter(x => x.p.id !== exact.p.id).slice(0, 7).map(x => x.p.id));
+      } else {
+        /* 2) ชื่อใกล้เคียง — แล้วค่อยเลือกสีที่ตรงกันในกลุ่มชื่อเดียวกัน
+           ถ้าดูแต่ชื่ออย่างเดียวจะได้สีมั่ว เช่นของ "สีทอง" ไปลงตัว "สีเงิน" */
+        const t = trigrams(raw);
+        const ranked = idx
+          .map(x => ({ x, s: x.n === normTh(raw) ? 1 : Math.min(trigScore(t, x.t), trigScore(x.t, t)) }))
+          .sort((a, b) => b.s - a.s);
+        cands = ranked.slice(0, 8).map(o => o.x.p.id);
+
+        const top = ranked[0];
+        if (top && top.s >= 0.85) {
+          /* ทุกตัวที่คะแนนชื่อเท่ากับตัวที่ดีที่สุด = สินค้าเดียวกัน ต่างกันแค่สี */
+          const sameName = ranked.filter(o => Math.abs(o.s - top.s) < 0.001);
+          const byColor = sameName.find(o => normTh(o.x.p.variant || '') === rv);
+          if (byColor) {
+            sku = byColor.x.p.id; sure = true;
+            /* ดันตัวที่เลือกขึ้นหัวรายการ จะได้เห็นก่อนในดรอปดาวน์ */
+            cands = [sku].concat(cands.filter(id => id !== sku)).slice(0, 8);
+          }
+          /* สีนี้ยังไม่มีในระบบ — ปล่อยให้เลือกเอง ดีกว่าลงผิดสีเงียบๆ */
+        }
+      }
+
+      return {
+        id: 'im' + i + '_' + Math.random().toString(36).slice(2, 7),
+        sku, sure, cands, raw: raw + (r.variant ? ' · ' + r.variant : ''),
+        date: r.date || today(),
+        qty: String(r.qty || 1),
+        price: r.price !== undefined && r.price !== null && r.price !== '' ? String(r.price) : '',
+        key: r.key || r.oid || ('row' + i),
+        oid: r.oid || ''
+      };
+    });
+  }
+
   onTiktokExcel = e => {
-    const file = e.target.files?.[0];
+    const file = e.target.files && e.target.files[0];
+    e.target.value = '';
     if (!file) return;
+    this.setState({ excelNote: 'กำลังอ่านไฟล์ ' + file.name + ' …' });
     const reader = new FileReader();
     reader.onload = async ev => {
       try {
-        const buf = ev.target?.result;
+        const buf = ev.target && ev.target.result;
         if (!buf) return;
         const wb = await this.parseXlsx(buf);
         const ws = wb[Object.keys(wb)[0]];
+        if (!ws || !ws.length) return this.setState({ excelNote: 'ไฟล์ว่าง' });
+
+        const headers = (ws[0] || []).map(h => String(h || ''));
+        const col = re => headers.findIndex(h => re.test(h));
+        const iName = col(/^product name$|product|ชื่อสินค้า|สินค้า/i);
+        const iQty = col(/^quantity$|^qty$|จำนวน/i);
+        const iDate = col(/created time|paid time|^date$|วันที่/i);
+        const iPrice = col(/unit original price|unit price|ราคาต่อ/i);
+        const iBefore = col(/subtotal before discount/i);
+        const iAfter = col(/subtotal after discount/i);
+        const iStatus = col(/order status/i);
+        const iCancel = col(/cancelation|cancellation/i);
+        const iOid = col(/order id/i);
+        const iVar = col(/^variation$|ตัวเลือก|สี/i);
+
+        if (iName < 0) return this.setState({ excelNote: 'ไม่พบคอลัมน์ชื่อสินค้า — ใช้ไฟล์ที่ดาวน์โหลดจาก TikTok Seller Center โดยตรง' });
+
+        /* ไฟล์ของ TikTok มีบรรทัดคำอธิบายคั่นอยู่ใต้หัวตาราง ต้องข้ามไม่งั้นจะกลายเป็นสินค้าปลอมหนึ่งแถว */
+        let start = 1;
+        if (iOid >= 0 && ws[1] && /^[A-Za-z].*\.$/.test(String(ws[1][iOid] || ''))) start = 2;
+
+        const done = {};
+        (this.state.importedOrders || []).forEach(k => { done[String(k)] = 1; });
+
         const rows = [];
-        const headers = ws[0] || [];
-        const nameIdx = headers.findIndex(h => /product|name|ชื่อ|สินค้า/i.test(h));
-        const qtyIdx = headers.findIndex(h => /qty|quantity|จำนวน|ชิ้น/i.test(h));
-        const dateIdx = headers.findIndex(h => /date|วันที่|วัน/i.test(h));
-        for (let i = 1; i < ws.length; i++) {
+        let skipCancel = 0, skipDone = 0;
+        for (let i = start; i < ws.length; i++) {
           const row = ws[i] || [];
-          const name = row[nameIdx >= 0 ? nameIdx : 0] || '';
-          const qty = Math.max(1, Math.round(parseFloat(row[qtyIdx >= 0 ? qtyIdx : 1]) || 1));
-          const date = this.xlsxDate(row[dateIdx >= 0 ? dateIdx : 2]) || today();
-          if (name) rows.push({ name: String(name).trim(), variant: '', qty, date, oid: 'ex' + i, raw: name });
+          const name = String(row[iName] || '').trim();
+          if (!name) continue;
+
+          /* ออเดอร์ที่ยกเลิกไม่ใช่ยอดขาย ถ้านับเข้าไปด้วยกำไรจะเกินจริง */
+          const status = iStatus >= 0 ? String(row[iStatus] || '').trim() : '';
+          const ctype = iCancel >= 0 ? String(row[iCancel] || '').trim() : '';
+          if (/ยกเลิก|cancel/i.test(status) || /^cancel$/i.test(ctype)) { skipCancel++; continue; }
+
+          const oid = iOid >= 0 ? String(row[iOid] || '').trim() : '';
+          const key = oid ? oid + '#' + i : 'x' + i;
+          if (done[key]) { skipDone++; continue; }          /* เคยนำเข้าไปแล้ว ไม่ซ้ำอีก */
+
+          const qty = Math.max(1, Math.round(num(row[iQty >= 0 ? iQty : -1])) || 1);
+          const price = iPrice >= 0 ? num(row[iPrice]) : 0;
+          const before = iBefore >= 0 ? num(row[iBefore]) : 0;
+          const after = iAfter >= 0 ? num(row[iAfter]) : 0;
+
+          /* TikTok ใช้คำว่า "ค่าเริ่มต้น" แทน "สินค้านี้ไม่มีตัวเลือก" ไม่ใช่ชื่อสี
+             ต้องอ่านสีมาด้วย ไม่งั้นสินค้าที่แยกสีไว้จะจับคู่ผิดตัว */
+          const variation = iVar >= 0 ? String(row[iVar] || '').trim() : '';
+          rows.push({
+            name, variant: variation === 'ค่าเริ่มต้น' ? '' : variation, qty,
+            date: this.xlsxDate(iDate >= 0 ? row[iDate] : '') || today(),
+            price: price || (after ? Math.round(after / qty) : ''),
+            gross: after || before || 0,
+            key, oid
+          });
         }
-        this.setState({ importRows: this.matchRows(rows), importedOrders: rows, excelNote: rows.length + ' รายการจากไฟล์ Excel' });
+
+        if (!rows.length) {
+          return this.setState({ excelNote: 'ไม่มีรายการใหม่ที่จะนำเข้า' + (skipDone ? ' (ข้ามที่เคยนำเข้าแล้ว ' + skipDone + ')' : '') });
+        }
+
+        const matched = this.matchRows(rows);
+        const sure = matched.filter(r => r.sku).length;
+        this.setState({
+          importRows: matched,
+          excelNote: rows.length + ' รายการจากไฟล์ · จับคู่อัตโนมัติได้ ' + sure + ' · ต้องเลือกเอง ' + (rows.length - sure)
+            + (skipCancel ? ' · ข้ามที่ยกเลิก ' + skipCancel : '')
+            + (skipDone ? ' · ข้ามที่ซ้ำ ' + skipDone : '')
+        });
       } catch (err) {
         this.setState({ excelNote: 'อ่านไฟล์ไม่สำเร็จ: ' + (err && err.message ? err.message : 'ตรวจสอบรูปแบบ Excel') });
       }
@@ -1982,20 +2149,78 @@ class Component extends DCLogic {
   setCartPrice(sku, v) {
     this.setState({ cart: this.state.cart.map(c => c.sku === sku ? { ...c, price: v } : c) });
   }
-  clearCart = () => this.setState({ cart: [], toast: '' });
+  /* ---- ของแถมที่ให้ลูกค้า ----
+     ไม่ใช่สินค้าในสต็อก จึงไม่ต้องมีอยู่ในรายการสินค้าก่อน พิมพ์ชื่อกับตั้งราคาเอาเองตอนบันทึก
+     ตอนกดบันทึกจะสร้าง (หรือใช้ซ้ำ) รายการที่ติดธง gift ไว้ ซึ่งถูกซ่อนจากหน้าสินค้าและสต็อก
+     ทำแบบนี้เพื่อให้รายงาน กราฟ และการคิดกำไรส่วนอื่นใช้โค้ดเดิมได้ทั้งหมด ไม่ต้องแก้ทีละจุด */
+  giftCats() {
+    const r = Object.keys(this.rules());
+    return r.length ? r : Object.keys(RULES);
+  }
+
+  addGift = () => {
+    const cats = this.giftCats();
+    this.setState({
+      gifts: [...(this.state.gifts || []), {
+        key: 'g' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+        name: '', cat: cats[0] || '', qty: 1, price: '0'
+      }],
+      toast: ''
+    });
+  };
+
+  editGift(key, patch) {
+    this.setState({ gifts: (this.state.gifts || []).map(g => g.key === key ? { ...g, ...patch } : g) });
+  }
+
+  bumpGift(key, d) {
+    this.setState({ gifts: (this.state.gifts || []).map(g => g.key === key ? { ...g, qty: g.qty + d } : g).filter(g => g.qty > 0) });
+  }
+
+  delGift(key) {
+    this.setState({ gifts: (this.state.gifts || []).filter(g => g.key !== key) });
+  }
+
+  /* หาตัวเดิมที่ชื่อกับหมวดตรงกันก่อน จะได้ไม่งอกรายการใหม่ทุกครั้งที่แถมของชิ้นเดิม */
+  findOrMakeGift(products, name, cat) {
+    const key = normTh(name) + '|' + normTh(cat);
+    const hit = products.find(p => p.gift && normTh(p.name) + '|' + normTh(p.cat) === key);
+    if (hit) return { products, p: hit };
+    const p = {
+      id: 'gift' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+      name, short: name, cat, variant: 'ของแถม',
+      price: 0, cost: 0, stock: 0, gift: true
+    };
+    return { products: [...products, p], p };
+  }
+
+  clearCart = () => this.setState({ cart: [], gifts: [], toast: '' });
 
   saveCart = () => {
     const st = this.state;
-    if (!st.cart.length) return;
+    const giftList = (st.gifts || []).filter(g => String(g.name || '').trim());
+    if (!st.cart.length && !giftList.length) return;
     const ch = CHANNELS.find(c => c.name === st.ch) || CHANNELS[0];
     const chFeePct = this.chFee(ch.name);   /* เก็บ % ณ วันที่ขายติดไปกับรายการ ปรับ % ทีหลังจึงไม่กระทบยอดเก่า */
     const stamp = Date.now();
 
+    let products = st.products, pkg = st.pkg;
+
     const lines = st.cart.map(c => {
       const p = this.byId(c.sku);
       const price = num(c.price) || (p ? p.price : 0);
-      return { c, p, price, sub: price * c.qty };
+      return { c, p, price, sub: price * c.qty, gift: false };
     }).filter(l => l.p);
+
+    /* ของแถม: สร้างรายการที่ติดธง gift ไว้ (หรือใช้ตัวเดิมถ้าเคยแถมชื่อนี้แล้ว)
+       ราคาที่กรอกใช้ตามที่กรอกจริง กรอก 0 = แถมฟรี ไม่มีรายได้เข้า */
+    giftList.forEach(g => {
+      const r = this.findOrMakeGift(products, String(g.name).trim(), g.cat);
+      products = r.products;
+      const price = num(g.price);
+      lines.push({ c: { qty: g.qty }, p: r.p, price, sub: price * g.qty, gift: true });
+    });
+
     if (!lines.length) return;
 
     /* ส่วนลดกับค่าส่งกรอกครั้งเดียวต่อบิล จึงเฉลี่ยลงแต่ละรายการตามสัดส่วนยอดขาย
@@ -2004,7 +2229,6 @@ class Component extends DCLogic {
     const disc = num(st.disc), ship = num(st.ship);
     let usedDisc = 0, usedShip = 0;
 
-    let products = st.products, pkg = st.pkg;
     const sales = [];
 
     lines.forEach((l, i) => {
@@ -2019,15 +2243,18 @@ class Component extends DCLogic {
         price: l.price, disc: d, ship: sh, ch: ch.name, fee: chFeePct
       });
 
-      products = products.map(x => x.id === l.p.id ? { ...x, stock: x.stock - l.c.qty } : x);
+      /* ของแถมไม่มีสต็อกให้ตัด แต่ยังกินอุปกรณ์แพคตามหมวดที่เลือก */
+      if (!l.gift) products = products.map(x => x.id === l.p.id ? { ...x, stock: x.stock - l.c.qty } : x);
       const rule = this.rule(l.p.cat);
       pkg = pkg.map(x => rule[x.name] ? { ...x, stock: x.stock - rule[x.name] * l.c.qty } : x);
     });
 
+    const nGift = lines.filter(l => l.gift).length;
     this.set({
       sales: [...st.sales, ...sales],
-      products, pkg, cart: [], disc: '', ship: '',
-      okBanner: 'บันทึกการขาย ' + sales.length + ' รายการ · ตัดสต็อกสินค้าและแพคเกจแล้ว'
+      products, pkg, cart: [], gifts: [], disc: '', ship: '',
+      okBanner: 'บันทึกการขาย ' + sales.length + ' รายการ'
+        + (nGift ? ' (รวมของแถม ' + nGift + ')' : '') + ' · ตัดสต็อกสินค้าและแพคเกจแล้ว'
     });
     setTimeout(() => this.setState({ okBanner: '' }), 3000);
   };
@@ -2241,7 +2468,9 @@ class Component extends DCLogic {
 
   renderVals() {
     const st = this.state;
-    const P = st.products;
+    /* ของแถมไม่ใช่สินค้าที่ต้องสต็อกหรือสั่งเพิ่ม จึงกรองออกตั้งแต่ตรงนี้จุดเดียว
+       หน้าสินค้า แผนสั่งของ สต็อกใกล้หมด และตัวนับ SKU จะไม่เห็นของแถมทั้งหมด */
+    const P = st.products.filter(p => !p.gift);
     const dayList = this.daySales(st.date);
     const day = this.agg(dayList, [st.date]);
     const rDates = this.dates(st.range);
@@ -2262,6 +2491,13 @@ class Component extends DCLogic {
       const p = this.byId(c.sku); if (!p) return;
       const pr = num(c.price) || p.price;
       cUnits += c.qty; cSub += pr * c.qty; cCost += p.cost * c.qty; cPkg += this.pkgUnitCost(p.cat) * c.qty;
+    });
+    /* ของแถมยังไม่ได้เป็นรายการสินค้าจริงจนกว่าจะกดบันทึก จึงบวกยอดแยกตรงนี้
+       ราคาที่กรอกคือรายได้ (แถมฟรี = 0) ส่วนค่าแพคหักตามหมวดที่เลือก */
+    const giftLines = (st.gifts || []);
+    giftLines.forEach(g => {
+      const pr = num(g.price);
+      cUnits += g.qty; cSub += pr * g.qty; cPkg += this.pkgUnitCost(g.cat) * g.qty;
     });
     const cGross = cSub - num(st.disc);
     const cFee = cGross * chFee / 100;
@@ -2335,7 +2571,7 @@ class Component extends DCLogic {
       syncTap: this.syncTap,
       locked: st.locked,
       pinErr: st.pinErr,
-      pinDots: [0, 1, 2].map(i => ({
+      pinDots: Array.from({ length: PIN_LEN }, (_, i) => ({
         style: {
           width: 13, height: 13, borderRadius: '50%',
           background: st.pin.length > i ? INK : 'transparent',
@@ -2410,11 +2646,6 @@ class Component extends DCLogic {
         style: pill(st.ch === c.name),
         go: () => this.setState({ ch: c.name })
       })),
-      feeChannel: ch.name,
-      feeValue: this.draftVal('fee:' + ch.name, (st.fees || {})[ch.name] !== undefined ? (st.fees || {})[ch.name] : chFee),
-      onFeeBlur: this.clearDraft('fee:' + ch.name),
-      onFee: e => this.setFee(ch.name, e.target.value),
-      feeNote: 'ปรับได้เมื่อแพลตฟอร์มเปลี่ยนอัตรา · ยอดขายที่บันทึกไปแล้วยังใช้ % เดิมของวันนั้น · เว้นว่างเพื่อกลับไปใช้ค่าตั้งต้น ' + ((CHANNELS.find(c => c.name === ch.name) || {}).fee || 0) + '%',
       catFilters: cats.map(c => ({ label: c, style: pill(st.cat === c), go: () => this.setState({ cat: c }) })),
       sortFilters: [
         { key: 'default', label: 'ลำดับเดิม' },
@@ -2531,9 +2762,9 @@ class Component extends DCLogic {
         },
         pick: () => this.addToCart(p.id)
       })),
-      cartEmpty: st.cart.length === 0,
-      cartHas: st.cart.length > 0,
-      cartCount: cUnits + ' ชิ้น · ' + st.cart.length + ' รายการ',
+      cartEmpty: st.cart.length === 0 && giftLines.length === 0,
+      cartHas: st.cart.length > 0 || giftLines.length > 0,
+      cartCount: cUnits + ' ชิ้น · ' + (st.cart.length + giftLines.length) + ' รายการ',
       cartCta: 'บันทึกลงยอดขาย ' + cUnits + ' ชิ้น',
       cartRows: st.cart.map(c => {
         const p = this.byId(c.sku) || {};
@@ -2549,6 +2780,26 @@ class Component extends DCLogic {
           minus: () => this.bumpCart(c.sku, -1),
           onPrice: e => this.setCartPrice(c.sku, e.target.value),
           del: () => this.bumpCart(c.sku, -c.qty)
+        };
+      }),
+      /* แถวของแถมในตะกร้า — ชื่อกับราคาพิมพ์เองได้ ยังไม่ผูกกับสินค้าตัวไหน */
+      addGift: this.addGift,
+      giftRows: (st.gifts || []).map(g => {
+        const pr = num(g.price);
+        const net = pr * g.qty - pr * g.qty * chFee / 100 - this.pkgUnitCost(g.cat) * g.qty;
+        return {
+          name: g.name, price: g.price, qty: g.qty,
+          cats: this.giftCats().map(c => ({ id: c, label: c })),
+          cat: g.cat,
+          line: nf(pr * g.qty) + ' ฿',
+          net: (net >= 0 ? '+' : '−') + nf(Math.abs(net)) + ' ฿',
+          netColor: net >= 0 ? GREEN : RED,
+          onName: e => this.editGift(g.key, { name: e.target.value }),
+          onPrice: e => this.editGift(g.key, { price: e.target.value }),
+          onCat: e => this.editGift(g.key, { cat: e.target.value }),
+          plus: () => this.bumpGift(g.key, 1),
+          minus: () => this.bumpGift(g.key, -1),
+          del: () => this.delGift(g.key)
         };
       }),
       cartSummary: [

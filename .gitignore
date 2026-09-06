@@ -8,6 +8,11 @@ public/
 uploads/
 tmp/
 
+# ของ wrangler ตอนทดสอบในเครื่อง
+.wrangler/
+*.log
+.dev.vars
+
 # ไฟล์ระบบ
 .thumbnail
 .image-slots.state.json

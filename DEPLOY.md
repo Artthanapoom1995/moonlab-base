@@ -20,9 +20,21 @@ repo นี้เป็น **Public** — ใครก็อ่านโค้�
 
 ระบบถูกวางไว้ให้ปลอดภัยอยู่แล้ว:
 
-- `config.example.js` = ไฟล์ตัวอย่าง มีแต่ค่าว่าง → อยู่บน GitHub ได้
-- `config.js` = ไฟล์รหัสลับจริงสำหรับทดสอบบนเครื่องคุณ → อยู่ใน `.gitignore` แล้ว **จะไม่ถูก push ไม่ว่าจะเผลอแค่ไหน**
-- ตอน deploy จริง Cloudflare จะสร้าง `config.js` ขึ้นเองจาก Environment variables ที่เก็บไว้ในระบบมันเอง
+- `.dev.vars` = ไฟล์รหัสลับสำหรับทดสอบบนเครื่องคุณ → อยู่ใน `.gitignore` **จะไม่ถูก push ไม่ว่าจะเผลอแค่ไหน**
+- `worker-config.js` = ค่าลับที่ build ฝังให้ `worker.js` → อยู่ใน `.gitignore` เช่นกัน
+- ตอน deploy จริง Cloudflare ฝังค่าให้เองจาก Environment variables ที่เก็บไว้ในระบบมันเอง
+
+> **สิ่งที่เปลี่ยนไปจากเดิม (ก.ย. 2569):** เมื่อก่อนรหัสฐานข้อมูลถูกเสิร์ฟออกไปในไฟล์ `config.js`
+> ซึ่งใครเปิด `เว็บ/config.js` ก็อ่านได้ แล้วยิงเข้า Supabase อ่าน–เขียนข้อมูลทั้งร้านได้เลย
+> ตอนนี้ย้ายไปอยู่ฝั่งเซิร์ฟเวอร์หมดแล้ว เบราว์เซอร์คุยกับ Supabase ตรงๆ ไม่ได้อีก
+>
+> **ถ้าเคยเปิดเว็บเวอร์ชันเก่าไว้ ต้องหมุน `APP_TOKEN` ใหม่ด้วย** — ตัวเก่าถือว่ารั่วไปแล้ว:
+>
+> ```sql
+>  update public.ml_config set app_token = 'ค่าใหม่ที่สุ่มมา' where id = 1;
+> ```
+>
+> แล้วอัปเดต `APP_TOKEN` ใน Cloudflare ให้ตรงกัน แล้วสั่ง build ใหม่
 
 ---
 
@@ -54,18 +66,23 @@ repo นี้เป็น **Public** — ใครก็อ่านโค้�
 
 ## ขั้นที่ 3 — (ทางเลือก) ทดสอบบนเครื่องตัวเองก่อน
 
-1. คัดลอก `config.example.js` → ตั้งชื่อใหม่เป็น `config.js`
-2. กรอก 3 ค่านี้ (เอามาจาก Supabase → **Project Settings**):
+ต้องมี Node ติดตั้งไว้ (ใช้ `npx` เรียก wrangler)
 
-   | ช่อง | เอามาจาก |
-   |---|---|
-   | `url` | Data API → **Project URL** (`https://xxxxx.supabase.co`) |
-   | `key` | API Keys → **anon** / **public** (ขึ้นต้นด้วย `eyJ...`) |
-   | `token` | รหัสลับที่ตั้งเองในขั้นที่ 2 |
+1. สร้างไฟล์ `.dev.vars` ในโฟลเดอร์นี้ (อยู่ใน `.gitignore` แล้ว):
 
-3. รัน `.\build.ps1` แล้ว `.\serve.ps1` → เปิด http://localhost:8080
+   ```
+   SUPABASE_URL=https://xxxxx.supabase.co
+   SUPABASE_ANON_KEY=sb_publishable_xxxxx
+   APP_TOKEN=รหัสลับจากขั้นที่ 2
+   APP_PIN=123456
+   SESSION_SECRET=ข้อความสุ่มยาวๆ
+   ```
 
-ไฟล์ `config.js` นี้จะไม่ถูก push ขึ้น GitHub (อยู่ใน `.gitignore` แล้ว)
+2. `bash build.sh` (หรือ `.\build.ps1` บน Windows)
+3. `npx wrangler dev` → เปิด http://localhost:8787
+
+> `.\serve.ps1` ยังใช้ดูหน้าตาเว็บได้ แต่มันเสิร์ฟไฟล์ static เฉยๆ ไม่ได้รัน `worker.js`
+> จึงทดสอบด่านรหัสกับการซิงก์ข้อมูลไม่ได้ ต้องใช้ `wrangler dev`
 
 ---
 
@@ -96,6 +113,12 @@ repo นี้เป็น **Public** — ใครก็อ่านโค้�
    | Variable | `SUPABASE_URL` | `https://xxxxx.supabase.co` |
    | Secret | `SUPABASE_ANON_KEY` | คีย์ที่ขึ้นต้นด้วย `sb_publishable_` หรือ `eyJ` |
    | Secret | `APP_TOKEN` | รหัสลับจากขั้นที่ 2 |
+   | Secret | `APP_PIN` | รหัส 6 หลักที่ใช้เข้าแอป |
+   | Secret | `SESSION_SECRET` | ข้อความสุ่มยาวๆ — `openssl rand -hex 32` |
+
+   > **ตราบใดที่ยังไม่ได้ตั้ง `APP_PIN` กับ `SESSION_SECRET` เว็บจะเปิดให้ใครก็เข้าได้**
+   > (ใช้งานได้ปกติทุกอย่าง ไม่พัง แต่ยังไม่มีด่านรหัส) พอตั้งครบสองตัวแล้วสั่ง build ใหม่
+   > ด่านรหัสจะเริ่มทำงานเอง
 
    แล้ว **กด Save** ของกล่องนั้นด้วย จากนั้นรีเฟรชหน้าเช็คว่าขึ้น `Value encrypted` จริง
 

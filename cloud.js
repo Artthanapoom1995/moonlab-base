@@ -39,14 +39,14 @@
   };
   var KEYS = Object.keys(SCHEMA);
 
-  var cfg = null;          /* { url, key, token } */
+  var cfg = null;          /* ตอนนี้เหลือแค่ธงว่า "พร้อมใช้งาน" — ความลับย้ายไปอยู่ฝั่ง Worker หมดแล้ว */
   var versions = {};       /* key -> version ที่เครื่องนี้รู้ */
   var lastSnap = {};       /* key -> ข้อมูลล่าสุดที่ push สำเร็จ (ใช้ตรวจว่ามีอะไรถูกลบ) */
   var tombs = {};          /* key -> { id: ts } รายการที่ถูกลบ */
   var dirty = {};          /* key -> true รอ push */
   var pending = {};        /* key -> data ล่าสุดที่รอส่ง */
   var timer = null, poller = null;
-  var onRemote = null, onStatus = null;
+  var onRemote = null, onStatus = null, onUnauth = null;
   var status = { state: 'offline', at: 0, msg: '' };
   var busy = false;
 
@@ -128,22 +128,26 @@
   }
 
   /* ---------- transport ---------- */
+  /* ยิงเข้า Worker ของเราเอง ไม่ใช่ Supabase โดยตรง
+     รหัสฐานข้อมูลอยู่ฝั่งเซิร์ฟเวอร์ ไฟล์นี้จึงไม่มีความลับอะไรเหลืออยู่แล้ว */
+  var API = "/api/db/";
+
   function rpc(fn, body) {
-    if (!cfg) return Promise.reject(new Error('ยังไม่ได้ตั้งค่า cloud'));
-    var ctl = typeof AbortController !== 'undefined' ? new AbortController() : null;
+    var ctl = typeof AbortController !== "undefined" ? new AbortController() : null;
     var to = setTimeout(function () { if (ctl) ctl.abort(); }, 15000);
-    return fetch(cfg.url.replace(/\/+$/, '') + '/rest/v1/rpc/' + fn, {
-      method: 'POST',
-      headers: {
-        'apikey': cfg.key,
-        'Authorization': 'Bearer ' + cfg.key,
-        'Content-Type': 'application/json'
-      },
+    return fetch(API + fn, {
+      method: "POST",
+      credentials: "same-origin",          /* ต้องส่ง cookie เซสชันไปด้วย */
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body || {}),
       signal: ctl ? ctl.signal : undefined
     }).then(function (r) {
       clearTimeout(to);
-      if (!r.ok) return r.text().then(function (t) { throw new Error('HTTP ' + r.status + ' ' + t.slice(0, 160)); });
+      if (r.status === 401) {              /* เซสชันหมดอายุ → ให้แอปกลับไปหน้าใส่รหัส */
+        if (onUnauth) { try { onUnauth(); } catch (e) { } }
+        throw new Error("เซสชันหมดอายุ กรุณาใส่รหัสใหม่");
+      }
+      if (!r.ok) return r.text().then(function (t) { throw new Error("HTTP " + r.status + " " + t.slice(0, 160)); });
       return r.json();
     }, function (e) { clearTimeout(to); throw e; });
   }
@@ -175,7 +179,7 @@
     var data = pending[key];
     if (data === undefined) { delete dirty[key]; return Promise.resolve(); }
     return rpc('ml_push', {
-      p_tok: cfg.token, p_key: key, p_data: data,
+      p_key: key, p_data: data,
       p_base: versions[key] || 0, p_who: MoonlabCloud.who()
     }).then(function (res) {
       var r = Array.isArray(res) ? res[0] : res;
@@ -208,14 +212,14 @@
 
   function poll() {
     if (!cfg || busy || document.hidden) return Promise.resolve();
-    return rpc('ml_versions', { p_tok: cfg.token }).then(function (rows) {
+    return rpc("ml_versions", {}).then(function (rows) {
       var stale = [];
       (rows || []).forEach(function (r) {
         if (dirty[r.key]) return;                     /* ของเรายังไม่ได้ส่ง อย่าเพิ่งทับ */
         if ((versions[r.key] || 0) < r.version) stale.push(r.key);
       });
       if (!stale.length) { setStatus('ok'); return null; }
-      return rpc('ml_pull', { p_tok: cfg.token, p_keys: stale }).then(function (docs) {
+      return rpc("ml_pull", { p_keys: stale }).then(function (docs) {
         (docs || []).forEach(function (d) {
           versions[d.key] = d.version;
           lastSnap[d.key] = clone(d.data);
@@ -234,10 +238,10 @@
   var MoonlabCloud = {
     KEYS: KEYS,
 
-    configure: function (c) {
-      if (!c || !c.url || !c.key || !c.token) return false;
-      if (/^__/.test(c.url) || /^__/.test(c.key) || /^__/.test(c.token)) return false;  /* ยังไม่ได้กรอกค่าจริง */
-      cfg = { url: c.url, key: c.key, token: c.token };
+    /* เดิมรับ url/key/token จาก config.js — ตอนนี้ Worker ถือไว้เองแล้ว
+       ยังรับ argument อยู่เพื่อไม่ให้โค้ดเดิมที่เรียกมาพัง แต่ไม่ได้ใช้ค่าอะไร */
+    configure: function () {
+      cfg = { proxy: API };
       var v = ls(VER_KEY, null);
       if (v) { versions = v.versions || {}; tombs = v.tombs || {}; }
       var out = ls(OUT_KEY, null);
@@ -264,7 +268,7 @@
     load: function () {
       if (!cfg) return Promise.resolve(null);
       setStatus('syncing');
-      return rpc('ml_pull', { p_tok: cfg.token, p_keys: KEYS }).then(function (docs) {
+      return rpc("ml_pull", { p_keys: KEYS }).then(function (docs) {
         var out = {}, any = false;
         (docs || []).forEach(function (d) {
           out[d.key] = d.data;
@@ -309,6 +313,7 @@
     start: function (handlers) {
       onRemote = handlers && handlers.onRemote;
       onStatus = handlers && handlers.onStatus;
+      onUnauth = handlers && handlers.onUnauth;
       if (!cfg) { setStatus('local'); return; }
       if (poller) clearInterval(poller);
       poller = setInterval(poll, POLL_MS);

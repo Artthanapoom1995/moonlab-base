@@ -1,0 +1,15 @@
+# Cloudflare รันคำสั่ง `npx wrangler deploy` ตอน deploy — ไฟล์นี้บอกมันว่าจะ deploy อะไร
+name = "moonlab-base"
+main = "worker.js"
+compatibility_date = "2026-09-06"
+
+# ไฟล์เว็บที่ build.sh สร้างไว้
+# run_worker_first = true คือหัวใจ — ทุก request ต้องผ่าน worker.js ก่อนเสมอ
+# ถ้าไม่ตั้ง Cloudflare จะเสิร์ฟไฟล์ใน public/ ตรงๆ โดยไม่ผ่านด่านตรวจ
+[assets]
+directory = "./public"
+binding = "ASSETS"
+run_worker_first = true
+
+# หมายเหตุ: อย่าเขียนรหัสลับลงไฟล์นี้ repo เป็น public
+# ค่าลับตั้งที่ Cloudflare → Settings → Variables and secrets

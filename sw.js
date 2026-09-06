@@ -7,7 +7,7 @@ var LIB = 'moonlab-lib-v1';
 
 var PRECACHE = [
   './', './index.html', './support.js', './cloud.js',
-  './config.js', './pwa.js', './products.json', './manifest.webmanifest',
+  './pwa.js', './products.json', './manifest.webmanifest',
   './icon-180.png', './icon-192.png', './icon-512.png'
 ];
 
@@ -34,6 +34,10 @@ self.addEventListener('fetch', function (e) {
   if (req.method !== 'GET') return;                       /* ข้อมูลจาก Supabase เป็น POST — ไม่แตะ */
   var url = new URL(req.url);
 
+  /* อย่าแตะ /api/ เด็ดขาด — /api/session เป็น GET ถ้าโดน cache ไว้
+     สถานะ "ปลดล็อกแล้ว" จะค้างจากรอบก่อน ทั้งที่เซสชันหมดอายุไปแล้ว */
+  if (url.origin === self.location.origin && url.pathname.indexOf('/api/') === 0) return;
+
   /* ไลบรารีจาก CDN: URL ล็อกเวอร์ชันอยู่แล้ว เอาจาก cache ได้เลย */
   if (url.origin !== self.location.origin) {
     if (!/unpkg\.com|cdn\.jsdelivr\.net|fonts\.(googleapis|gstatic)\.com/.test(url.host)) return;
@@ -51,10 +55,10 @@ self.addEventListener('fetch', function (e) {
     return;
   }
 
-  var isDoc = req.mode === 'navigate' || /\.html$|\/$/.test(url.pathname) || /config\.js$/.test(url.pathname);
+  var isDoc = req.mode === 'navigate' || /\.html$|\/$/.test(url.pathname);
 
   if (isDoc) {
-    /* หน้าเว็บ + config: เอาของใหม่ก่อนเสมอ ถ้าเน็ตหลุดค่อยใช้ของเดิม */
+    /* หน้าเว็บ: เอาของใหม่ก่อนเสมอ ถ้าเน็ตหลุดค่อยใช้ของเดิม */
     e.respondWith(
       fetch(req).then(function (res) {
         var copy = res.clone();

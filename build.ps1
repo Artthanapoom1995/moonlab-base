@@ -30,16 +30,12 @@ $sw = Get-Content (Join-Path $root 'sw.js') -Raw -Encoding UTF8
 $sw = $sw.Replace('__BUILD__', $stamp)
 Set-Content -Path (Join-Path $out 'sw.js') -Value $sw -Encoding UTF8 -NoNewline
 
-# 4) config.js — ไฟล์รหัสลับสำหรับทดสอบบนเครื่องนี้ (ไม่ถูก push ขึ้น GitHub เพราะอยู่ใน .gitignore)
-$cfgPath = Join-Path $root 'config.js'
-if (-not (Test-Path $cfgPath)) {
-  Copy-Item (Join-Path $root 'config.example.js') $cfgPath -Force
-  Write-Warning 'ไม่พบ config.js — สร้างจาก config.example.js ให้แล้ว'
-}
-Copy-Item $cfgPath (Join-Path $out 'config.js') -Force
-if ((Get-Content $cfgPath -Raw -Encoding UTF8) -match '__SUPABASE_URL__') {
-  Write-Host ''
-  Write-Warning 'config.js ยังไม่ได้กรอกค่า Supabase — เว็บจะเก็บข้อมูลแยกเครื่องใครเครื่องมัน (ยังไม่แชร์กัน)'
+# 4) ค่าลับสำหรับ worker.js
+#    ตอนทดสอบบนเครื่องนี้ปล่อยว่างไว้ได้ (serve.ps1 เสิร์ฟไฟล์ static เฉยๆ ไม่ได้รัน worker)
+#    ถ้าอยากทดสอบด่านรหัสจริง ใช้ npx wrangler dev แล้วใส่ค่าในไฟล์ .dev.vars
+$wcfg = Join-Path $root 'worker-config.js'
+if (-not (Test-Path $wcfg)) {
+  @('/* สร้างอัตโนมัติตอน build — อย่าแก้ อย่า commit */','export const BUILD_ENV = {','  SUPABASE_URL: '''',','  SUPABASE_ANON_KEY: '''',','  APP_TOKEN: '''',','  APP_PIN: '''',','  SESSION_SECRET: ''''','};') | Set-Content -Path $wcfg -Encoding UTF8
 }
 
 # uploads/ กับ tmp/ ไม่ได้ถูกคัดลอกไปด้วยตั้งใจ — เป็นไฟล์ที่เคยอัปไว้ตอนนำเข้าข้อมูล
