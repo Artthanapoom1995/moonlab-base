@@ -76,6 +76,8 @@
       <div style="flex:1"></div>
       <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
         <button onClick="{{ syncTap }}" title="{{ syncTitle }}" style="{{ syncStyle }}">{{ syncLabel }}</button>
+        <div style="font-size:11.5px;font-weight:300;color:#C09A54">{{ imgBusy }}</div>
+        <input type="file" accept="image/*" onChange="{{ onImageFile }}" id="moonlab-img-input" style="display:none" />
         <div style="font-size:12.5px;font-weight:300;color:#8C867C">{{ headNote }}</div>
       </div>
     </div>
@@ -534,8 +536,7 @@
         <div style="font-size:11px;font-weight:400;letter-spacing:0.2em;color:#A19A8E;text-transform:uppercase;margin-bottom:7px">แพคเกจ</div>
         <div style="font-size:clamp(21px,4.4vw,26px);font-weight:400;letter-spacing:-0.01em;margin-bottom:10px">สต็อกอุปกรณ์แพคเกจ</div>
         <div style="font-size:12.5px;font-weight:300;color:#8C867C;margin-bottom:14px;max-width:820px;text-wrap:pretty">ตัดออกอัตโนมัติทุกครั้งที่บันทึกขาย ตามสูตรแพคของแต่ละหมวดสินค้าด้านล่าง</div>
-        <div style="font-size:11.5px;font-weight:300;color:#A19A8E;margin-bottom:20px">แตะ ⠿ ค้างไว้แล้วลากเพื่อจัดลำดับการ์ด · ✎ เปลี่ยนรูป · 🗑 ลบรูป — ลำดับและรูปซิงก์ทุกเครื่อง <span style="color:#C09A54">{{ imgBusy }}</span></div>
-        <input type="file" accept="image/*" onChange="{{ onImageFile }}" id="moonlab-img-input" style="display:none" />
+        <div style="font-size:11.5px;font-weight:300;color:#A19A8E;margin-bottom:20px">แตะ ⠿ ค้างไว้แล้วลากเพื่อจัดลำดับการ์ด · ✎ เปลี่ยนรูป · 🗑 ลบรูป — ลำดับและรูปซิงก์ทุกเครื่อง</div>
 
         <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(196px,1fr));gap:12px;margin-bottom:12px">
           <sc-for list="{{ pkgRows }}" as="p" hint-placeholder-count="9">
@@ -748,7 +749,7 @@
             <div style="font-size:13.5px;font-weight:500">ติดตามรอบสั่งของ</div>
             <div style="flex:1;min-width:200px;font-size:11.5px;font-weight:300;color:#8C867C">{{ orderSummary }}</div>
           </div>
-          <div style="font-size:11.5px;font-weight:300;color:#A19A8E;margin-bottom:16px">บันทึกวันสั่งและยอดเงิน ระบบคิดวันออกบิล (+5 วัน) และวันที่ของถึง (+15 วัน) ให้ กดที่สถานะเพื่อเลื่อนขั้น</div>
+          <div style="font-size:11.5px;font-weight:300;color:#A19A8E;margin-bottom:16px">บันทึกวันสั่งและยอดเงิน ระบบคิดวันออกบิล (+5 วัน) และวันที่ของถึง (+15 วัน) ให้ กดที่สถานะเพื่อเลื่อนขั้น · แตะกรอบ <span style="color:#8C867C">＋ รูป</span> หน้าแต่ละรอบเพื่อแนบรูปใบสั่งของหรือสลิป</div>
 
           <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;padding-bottom:16px;border-bottom:1px solid #F2EFE8">
             <div>
@@ -771,6 +772,7 @@
           </sc-if>
           <sc-for list="{{ orderRows }}" as="o" hint-placeholder-count="0">
             <div style="display:flex;flex-wrap:wrap;align-items:center;gap:14px;padding:14px 0;border-bottom:1px solid #F5F2EC">
+              <button onClick="{{ o.pick }}" title="แนบรูป" style="{{ o.thumbStyle }}">{{ o.thumbLabel }}</button>
               <div style="min-width:150px">
                 <div style="font-size:13px;font-weight:500">{{ o.date }} · {{ o.amount }}</div>
                 <div style="font-size:11px;font-weight:300;color:#A19A8E;margin-top:3px">{{ o.note }}</div>
@@ -781,6 +783,7 @@
               </div>
               <div style="font-size:12.5px;font-weight:500;color:{{ o.etaColor }};min-width:96px">{{ o.eta }}</div>
               <button onClick="{{ o.cycle }}" style="{{ o.statusStyle }}">{{ o.status }}</button>
+              <button onClick="{{ o.clearImg }}" title="ลบรูปที่แนบ" style="{{ o.clearImgStyle }}" style-hover="color:#B4675C">🗑</button>
               <button onClick="{{ o.del }}" style="border:none;background:transparent;color:#C4BEB4;width:34px;height:34px;font-size:15px;line-height:1;cursor:pointer;border-radius:9px;flex:none" style-hover="color:#B4675C">×</button>
             </div>
           </sc-for>
@@ -1350,7 +1353,7 @@ class Component extends DCLogic {
     });
   };
   cycleOrder(id) { this.set({ orders: this.state.orders.map(o => o.id === id ? { ...o, status: (o.status + 1) % 3 } : o) }); }
-  delOrder(id) { this.set({ orders: this.state.orders.filter(o => o.id !== id) }); }
+  delOrder(id) { this.set({ orders: this.state.orders.filter(o => o.id !== id), images: this.imagesWithout('order:' + id) }); }
 
   addTask = () => {
     const t = this.state.newTaskText.trim();
@@ -1374,7 +1377,14 @@ class Component extends DCLogic {
       newPkgName: '', newPkgCost: '', newPkgStock: ''
     });
   };
-  delPkg(name) { this.set({ pkg: this.state.pkg.filter(p => p.name !== name) }); }
+  delPkg(name) { this.set({ pkg: this.state.pkg.filter(p => p.name !== name), images: this.imagesWithout(name) }); }
+
+  /* ลบรูปที่ผูกกับของที่ถูกลบไปด้วย ไม่งั้นรูปกำพร้าจะค้างกินพื้นที่ซิงก์ไปเรื่อยๆ */
+  imagesWithout(key) {
+    const images = { ...(this.state.images || {}) };
+    delete images[key];
+    return images;
+  }
   bumpPkg(name, d) {
     this.dropDraft('pkg:stock:' + name);   /* ปุ่ม + − ต้องชนะข้อความที่ค้างอยู่ในช่อง */
     this.set({ pkg: this.state.pkg.map(p => p.name === name ? { ...p, stock: Math.max(0, p.stock + d) } : p) });
@@ -2745,7 +2755,27 @@ class Component extends DCLogic {
             whiteSpace: 'nowrap', fontFamily: "'Prompt',sans-serif"
           },
           cycle: () => this.cycleOrder(o.id),
-          del: () => this.delOrder(o.id)
+          del: () => this.delOrder(o.id),
+
+          /* รูปแนบของรอบสั่ง เก็บที่เดียวกับรูปอุปกรณ์ แยกด้วยคำนำหน้า order: */
+          pick: () => this.pickImage('order:' + o.id),
+          clearImg: () => this.removeImage('order:' + o.id),
+          thumbLabel: (st.images || {})['order:' + o.id] ? '' : '＋ รูป',
+          thumbStyle: (() => {
+            const im = (st.images || {})['order:' + o.id];
+            const base = {
+              width: 54, height: 54, flex: 'none', borderRadius: 10, cursor: 'pointer',
+              fontSize: 10.5, fontWeight: 400, fontFamily: "'Prompt',sans-serif", padding: 0
+            };
+            return im
+              ? { ...base, border: '1px solid #E4E0D8', color: 'transparent', backgroundImage: 'url("' + im + '")', backgroundSize: 'cover', backgroundPosition: 'center' }
+              : { ...base, border: '1px dashed #DCD7CE', background: '#FBF9F5', color: '#A19A8E' };
+          })(),
+          clearImgStyle: {
+            border: 'none', background: 'transparent', color: '#C4BEB4',
+            width: 30, height: 34, fontSize: 13, lineHeight: 1, cursor: 'pointer', flex: 'none',
+            display: (st.images || {})['order:' + o.id] ? 'block' : 'none'
+          }
         };
       }),
       advice: [
