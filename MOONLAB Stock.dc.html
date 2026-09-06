@@ -512,7 +512,7 @@
           </div>
           <sc-for list="{{ stockRows }}" as="s" hint-placeholder-count="10">
             <div style="display:grid;grid-template-columns:44px minmax(160px,1fr) 104px 104px 84px 86px 86px 74px 88px 72px;min-width:1030px;gap:10px;align-items:center;padding:11px clamp(14px,3vw,22px);border-bottom:1px solid #F5F2EC">
-              <div style="text-align:center;font-size:11px;font-weight:300;color:#9A9388;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ s.sku }}</div>
+              <div style="text-align:center;font-size:12px;font-weight:400;color:#A19A8E">{{ s.sku }}</div>
               <div style="min-width:0">
                 <div title="{{ s.fullName }}" style="font-size:13px;font-weight:400;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ s.name }}</div>
                 <div style="font-size:10.5px;font-weight:300;color:#A19A8E;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ s.variant }}</div>
@@ -2594,11 +2594,11 @@ class Component extends DCLogic {
         { label: 'ใกล้หมด (≤' + THRESHOLD + ')', value: nf(P.filter(p => p.stock > 0 && p.stock <= THRESHOLD).length), color: AMBER },
         { label: 'หมดสต็อก', value: nf(P.filter(p => p.stock <= 0).length), color: RED }
       ],
-      stockRows: filtered.slice(0, 60).map(p => {
+      stockRows: filtered.slice(0, 60).map((p, i) => {
         const pk = this.pkgUnitCost(p.cat);
         const m = p.price - p.cost - pk - p.price * 0.08;
         return {
-          sku: p.id, name: p.short, fullName: p.name, variant: p.variant || '—', cat: p.cat,
+          sku: i + 1, name: p.short, fullName: p.name, variant: p.variant || '—', cat: p.cat,
           sold: (sold30[p.id] || 0) + ' ชิ้น',
           stock: this.draftVal('p:stock:' + p.id, p.stock),
           onStockBlur: this.clearDraft('p:stock:' + p.id),
