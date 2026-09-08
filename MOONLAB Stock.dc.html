@@ -230,21 +230,7 @@
           </div>
         </sc-if>
 
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
-          <div style="background:#FFFDFA;border:1px solid #EBE7DF;border-radius:16px;padding:clamp(16px,3vw,20px) clamp(16px,3.2vw,24px)">
-            <div style="display:flex;flex-wrap:wrap;align-items:center;gap:14px">
-              <div style="flex:1;min-width:180px">
-                <div style="font-size:13.5px;font-weight:500;margin-bottom:4px">PDF ใบปะหน้า TikTok</div>
-                <div style="font-size:11.5px;font-weight:300;color:#A19A8E;text-wrap:pretty">อ่านชื่อสินค้า จำนวน วันที่ส่ง จับคู่อัตโนมัติ</div>
-              </div>
-              <label style="border:1px dashed #D8D3CA;background:#FBF9F5;border-radius:11px;padding:11px 16px;font-size:12px;font-weight:500;cursor:pointer;color:#3B3833;flex:none" style-hover="background:#F1EEE7">
-                📄 PDF
-                <input type="file" accept="application/pdf" onChange="{{ onPdf }}" style="display:none" />
-              </label>
-            </div>
-            <div style="font-size:11.5px;font-weight:300;color:#8C867C;margin-top:10px;min-height:15px">{{ importNote }}</div>
-          </div>
-
+        <div style="display:grid;grid-template-columns:1fr;gap:12px;margin-bottom:12px">
           <div style="background:#FFFDFA;border:1px solid #EBE7DF;border-radius:16px;padding:clamp(16px,3vw,20px) clamp(16px,3.2vw,24px)">
             <div style="display:flex;flex-wrap:wrap;align-items:center;gap:14px">
               <div style="flex:1;min-width:180px">
@@ -1126,45 +1112,6 @@ const trigScore = (a, b) => {
   return hit / ka.length;
 };
 
-function parseLabels(text) {
-  const chunks = text.split(/--\s*\d+\s+of\s+\d+\s*--/);
-  const orders = {};
-  chunks.forEach(ch => {
-    const oidM = ch.match(/Order ID:\s*(\d{8,})/) || ch.match(/Order ID\s*\n\s*(\d{8,})/);
-    const oid = oidM ? oidM[1] : null;
-    if (!oid) return;
-    const dM = ch.match(/Shipping Date:\s*(\d{2})-(\d{2})-(\d{4})/);
-    const date = dM ? dM[3] + '-' + dM[2] + '-' + dM[1] : null;
-    const o = orders[oid] || (orders[oid] = { oid, date: null, items: [] });
-    if (date) o.date = date;
-    const lines = ch.split('\n');
-    let buf = null;
-    lines.forEach(ln => {
-      if (/Moonlab\.|MOOLAB\./i.test(ln)) buf = [ln.replace(/.*?\|/, '')];
-      else if (buf) {
-        const q = ln.match(/^(.*?)\t\s*(\d+)\s*$/);
-        if (q) {
-          o.items.push({ name: buf.join(' ').trim(), variant: q[1].trim(), qty: Math.max(1, parseInt(q[2], 10)) });
-          buf = null;
-        } else if (/Qty Total|Order ID|Product Name/i.test(ln)) buf = null;
-        else buf.push(ln);
-      }
-    });
-  });
-  const out = [];
-  Object.keys(orders).forEach(k => {
-    const o = orders[k];
-    const seen = {};
-    o.items.forEach(it => {
-      const key = normTh(it.name) + '|' + normTh(it.variant);
-      if (seen[key]) { seen[key].qty = Math.max(seen[key].qty, it.qty); return; }
-      const row = { oid: o.oid, date: o.date, ...it };
-      seen[key] = row; out.push(row);
-    });
-  });
-  return out;
-}
-
 const iso = d => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
 const dayDiff = (a, b) => Math.round((new Date(a + 'T00:00:00') - new Date(b + 'T00:00:00')) / 86400000);
 const today = () => iso(new Date());
@@ -1223,7 +1170,7 @@ class Component extends DCLogic {
     qty: '1', price: '', disc: '', ship: '', ch: 'TikTok Shop',
     range: 7, budget: '20000', toast: '',
     newPkgName: '', newPkgCost: '', newPkgStock: '',
-    importRows: [], importNote: '', excelNote: '', importedOrders: [], cart: [], gifts: [], okBanner: '',
+    importRows: [], excelNote: '', importedOrders: [], cart: [], gifts: [], okBanner: '',
     itemsExcelNote: '',
     editingId: '', editingField: '', editingValue: '', draftNewId: '',
     tasks: [], newTaskText: '', newTaskTime: '',
@@ -1703,49 +1650,6 @@ class Component extends DCLogic {
   }
   dates(n, end) { const out = []; for (let i = n - 1; i >= 0; i--) out.push(addDays(end || today(), -i)); return out; }
 
-  onPdf = async e => {
-    const file = e.target.files && e.target.files[0];
-    e.target.value = '';
-    if (!file) return;
-    this.setState({ importNote: 'กำลังอ่านไฟล์ ' + file.name + ' …' });
-    try {
-      const mod = await import('https://cdn.jsdelivr.net/npm/pdf-parse@2.4.5/dist/pdf-parse/web/pdf-parse.es.js');
-      mod.PDFParse.setWorker('https://cdn.jsdelivr.net/npm/pdf-parse@2.4.5/dist/pdf-parse/web/pdf.worker.min.mjs');
-      const parser = new mod.PDFParse({ data: new Uint8Array(await file.arrayBuffer()) });
-      const res = await parser.getText();
-      const labels = parseLabels(res.text || '');
-      if (!labels.length) return this.setState({ importNote: 'อ่านไฟล์ได้ แต่ไม่พบรายการสินค้าในใบปะหน้า ลองไฟล์ที่ดาวน์โหลดจาก TikTok Seller Center โดยตรง' });
-      const done = this.state.importedOrders || [];
-      const cand = this.state.products.map(p => ({ p, tn: trigrams(p.name), tv: trigrams(p.variant || '') }));
-      const rows = [];
-      let dup = 0;
-      labels.forEach((l, i) => {
-        const key = l.oid + '|' + normTh(l.name) + '|' + normTh(l.variant);
-        if (done.indexOf(key) >= 0) { dup++; return; }
-        const tn = trigrams(l.name), tv = trigrams(l.variant);
-        const scored = cand.map(c => ({ p: c.p, s: trigScore(tn, c.tn) * 0.8 + trigScore(tv, c.tv) * 0.2 }))
-          .sort((a, b) => b.s - a.s);
-        const best = scored[0];
-        rows.push({
-          key, id: 'imp' + i, oid: l.oid, date: l.date || today(), qty: String(l.qty),
-          raw: l.name.replace(/\s+/g, ' ').slice(0, 70) + (l.variant ? ' · ' + l.variant : ''),
-          sku: best && best.s > 0.2 ? best.p.id : '',
-          price: best && best.s > 0.2 ? String(best.p.price) : '',
-          sure: !!best && best.s > 0.45,
-          cands: scored.slice(0, 8).map(x => x.p.id)
-        });
-      });
-      this.setState({
-        importRows: rows,
-        importNote: rows.length
-          ? 'อ่านได้ ' + labels.length + ' รายการจาก ' + file.name + (dup ? ' · ข้าม ' + dup + ' รายการที่บันทึกไปแล้ว' : '')
-          : 'ทุกรายการในไฟล์นี้บันทึกไปแล้ว'
-      });
-    } catch (err) {
-      this.setState({ importNote: 'อ่านไฟล์ไม่สำเร็จ: ' + (err && err.message ? err.message : 'ไฟล์อาจไม่ใช่ใบปะหน้า PDF') });
-    }
-  };
-
   editImport(id, patch) {
     this.setState({ importRows: this.state.importRows.map(r => r.id === id ? { ...r, ...patch } : r) });
   }
@@ -1753,7 +1657,7 @@ class Component extends DCLogic {
   confirmImport = () => {
     const st = this.state;
     const rows = st.importRows.filter(r => r.sku);
-    if (!rows.length) return this.setState({ importNote: 'ยังไม่มีแถวที่จับคู่กับสินค้า' });
+    if (!rows.length) return this.setState({ excelNote: 'ยังไม่มีแถวที่จับคู่กับสินค้า' });
     let products = st.products, pkg = st.pkg;
     const sales = [...st.sales];
     const ch = CHANNELS[0];
@@ -1769,12 +1673,12 @@ class Component extends DCLogic {
     this.set({
       sales, products, pkg,
       importedOrders: [...(st.importedOrders || []), ...rows.map(r => r.key)],
-      importRows: [], importNote: ''
+      importRows: [], excelNote: ''
     });
-    this.ok('อัพเดทแล้ว · บันทึกจากใบปะหน้า ' + rows.length + ' รายการ และตัดสต็อกสินค้ากับแพคเกจเรียบร้อย');
+    this.ok('อัพเดทแล้ว · บันทึก ' + rows.length + ' รายการ และตัดสต็อกสินค้ากับแพคเกจเรียบร้อย');
   };
 
-  cancelImport = () => this.setState({ importRows: [], importNote: '' });
+  cancelImport = () => this.setState({ importRows: [], excelNote: '' });
 
   /* จับคู่ชื่อสินค้าจากไฟล์กับสินค้าในระบบ
      ก่อนหน้านี้ฟังก์ชันนี้หายไปทั้งตัว ทั้งที่ onTiktokExcel เรียกใช้
@@ -2629,9 +2533,7 @@ class Component extends DCLogic {
       onBudget: e => this.setState({ budget: e.target.value }),
       onAd: e => this.set({ adSpend: { ...st.adSpend, [st.date]: num(e.target.value) } }),
       onTiktokExcel: this.onTiktokExcel,
-      onPdf: this.onPdf,
       adToday: st.adSpend[st.date] || '',
-      importNote: st.importNote,
       excelNote: st.excelNote,
       ranges: [7, 30, 90, 365].map(n => ({ label: n === 365 ? 'รายเดือน' : n + ' วัน', style: pill(st.range === n), go: () => this.setState({ range: n }) })),
       planShowCats: Object.keys(RULES).map(c => ({
@@ -2813,10 +2715,8 @@ class Component extends DCLogic {
       clearCart: this.clearCart,
       okBanner: st.okBanner,
       dismissOk: this.dismissOk,
-      onPdf: this.onPdf,
-      importNote: st.importNote,
       hasImport: st.importRows.length > 0,
-      importSummary: st.importRows.length + ' รายการจากใบปะหน้า · ' + Object.keys(st.importRows.reduce((a, r) => { a[r.oid] = 1; return a; }, {})).length + ' ออเดอร์',
+      importSummary: st.importRows.length + ' รายการจากไฟล์ · ' + Object.keys(st.importRows.reduce((a, r) => { a[r.oid] = 1; return a; }, {})).length + ' ออเดอร์',
       importCta: 'บันทึก ' + st.importRows.filter(r => r.sku).length + ' รายการ',
       importTotal: (() => {
         let net = 0, units = 0;
