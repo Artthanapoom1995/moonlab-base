@@ -2454,7 +2454,10 @@ class Component extends DCLogic {
     const P = st.products.filter(p => !p.gift);
     const dayList = this.daySales(st.date);
     const day = this.agg(dayList, [st.date]);
-    const rDates = this.dates(st.range);
+    const rDates = st.range === 'month'
+      ? (() => { const t = today(); const first = t.slice(0, 8) + '01'; const out = []; let d = first; while (d <= t) { out.push(d); d = addDays(d, 1); } return out; })()
+      : this.dates(st.range);
+    const rangeDays = rDates.length;
     const rList = st.sales.filter(s => rDates.indexOf(s.date) >= 0);
     const R = this.agg(rList, rDates);
     const d30 = this.dates(30);
@@ -2605,7 +2608,7 @@ class Component extends DCLogic {
       date: st.date, q: st.q, pq: st.pq, qty: st.qty, price: st.price, disc: st.disc, ship: st.ship,
       budget: st.budget, toast: st.toast,
       dayLabel: thDate(st.date),
-      rangeLabel: st.range === 365 ? 'รายเดือน · 12 เดือนล่าสุด' : st.range + ' วันล่าสุด',
+      rangeLabel: st.range === 365 ? 'รายเดือน · 12 เดือนล่าสุด' : st.range === 'month' ? 'เดือนนี้ · ' + rangeDays + ' วัน' : st.range + ' วันล่าสุด',
       onDate: e => this.setState({ date: e.target.value }),
       onQ: e => this.setState({ q: e.target.value }),
       onPq: e => this.setState({ pq: e.target.value }),
@@ -2618,7 +2621,13 @@ class Component extends DCLogic {
       onTiktokExcel: this.onTiktokExcel,
       adToday: st.adSpend[st.date] || '',
       excelNote: st.excelNote,
-      ranges: [7, 30, 90, 365].map(n => ({ label: n === 365 ? 'รายเดือน' : n + ' วัน', style: pill(st.range === n), go: () => this.setState({ range: n }) })),
+      ranges: [
+        { key: 7, label: '7 วัน' },
+        { key: 30, label: '30 วัน' },
+        { key: 90, label: '90 วัน' },
+        { key: 'month', label: 'เดือนนี้' },
+        { key: 365, label: 'รายเดือน' }
+      ].map(r => ({ label: r.label, style: pill(st.range === r.key), go: () => this.setState({ range: r.key }) })),
       planShowCats: Object.keys(RULES).map(c => ({
         label: c,
         style: pill(st.planShowCats && st.planShowCats[c]),
@@ -2652,9 +2661,9 @@ class Component extends DCLogic {
         { label: 'มาร์จิ้น', value: day.revenue ? nf1(day.net / day.revenue * 100) : '0.0', unit: '%', sub: 'กำไรสุทธิ ÷ ยอดขาย' }
       ],
       execKpis: [
-        { label: 'ยอดขายรวม', value: nf(R.revenue) + ' ฿', sub: nf(R.revenue / st.range) + ' ฿/วัน', color: INK },
-        { label: 'จำนวนที่ขายได้', value: nf(R.units) + ' ชิ้น', sub: nf1(R.units / st.range) + ' ชิ้น/วัน', color: INK },
-        { label: 'กำไรสุทธิ', value: nf(R.net) + ' ฿', sub: nf(R.net / st.range) + ' ฿/วัน', color: R.net >= 0 ? GREEN : RED },
+        { label: 'ยอดขายรวม', value: nf(R.revenue) + ' ฿', sub: nf(R.revenue / rangeDays) + ' ฿/วัน', color: INK },
+        { label: 'จำนวนที่ขายได้', value: nf(R.units) + ' ชิ้น', sub: nf1(R.units / rangeDays) + ' ชิ้น/วัน', color: INK },
+        { label: 'กำไรสุทธิ', value: nf(R.net) + ' ฿', sub: nf(R.net / rangeDays) + ' ฿/วัน', color: R.net >= 0 ? GREEN : RED },
         { label: 'ต้นทุนรวม', value: nf(R.cost) + ' ฿', sub: 'สินค้า แพค ส่ง ธรรมเนียม', color: INK },
         { label: 'ค่าโฆษณา', value: nf(R.ad) + ' ฿', sub: R.revenue ? nf1(R.ad / R.revenue * 100) + '% ของยอดขาย' : '—', color: INK },
         { label: 'กำไรต่อออเดอร์', value: R.orders ? nf(R.net / R.orders) + ' ฿' : '0 ฿', sub: R.orders + ' ออเดอร์', color: INK }
@@ -3161,7 +3170,7 @@ class Component extends DCLogic {
             color: a.net >= 0 ? GREEN : RED
           };
         }),
-      reportTotalLabel: monthly ? 'รวม 12 เดือน' : 'รวม ' + st.range + ' วัน',
+      reportTotalLabel: monthly ? 'รวม 12 เดือน' : st.range === 'month' ? 'รวมเดือนนี้ (' + rangeDays + ' วัน)' : 'รวม ' + st.range + ' วัน',
       reportTotal: monthly
         ? (() => {
           const t = series.reduce((a, s) => ({
