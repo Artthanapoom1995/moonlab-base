@@ -2493,6 +2493,10 @@ class Component extends DCLogic {
     /* เรียงลำดับที่ร้านเลือกเอง — localeCompare('th') เพื่อให้ ก-ฮ เรียงตามพจนานุกรมไทย ไม่ใช่ตามรหัสตัวอักษร */
     if (st.sort === 'name') filtered.sort((a, b) => String(a.short || a.name).localeCompare(String(b.short || b.name), 'th'));
     else if (st.sort === 'stock') filtered.sort((a, b) => b.stock - a.stock);
+    /* สูตรเดียวกับคอลัมน์ "กำไร/ชิ้น" ในตาราง — ราคาขาย หักต้นทุน ค่าแพค และค่าธรรมเนียมแพลตฟอร์ม 8% */
+    else if (st.sort === 'profit') filtered.sort((a, b) =>
+      (b.price - b.cost - this.pkgUnitCost(b.cat) - b.price * 0.08)
+      - (a.price - a.cost - this.pkgUnitCost(a.cat) - a.price * 0.08));
 
     const pkgUsed = {};
     list30.forEach(s => { const p = this.byId(s.sku); if (!p) return; const r = this.rule(p.cat); Object.keys(r).forEach(k => { pkgUsed[k] = (pkgUsed[k] || 0) + r[k] * s.qty; }); });
@@ -2637,7 +2641,8 @@ class Component extends DCLogic {
       sortFilters: [
         { key: 'default', label: 'ลำดับเดิม' },
         { key: 'name', label: 'ชื่อ ก–ฮ' },
-        { key: 'stock', label: 'สต็อกมาก→น้อย' }
+        { key: 'stock', label: 'สต็อกมาก→น้อย' },
+        { key: 'profit', label: 'กำไร/ชิ้น มาก→น้อย' }
       ].map(s => ({ label: s.label, style: pill(st.sort === s.key), go: () => this.setState({ sort: s.key }) })),
 
       dayKpis: [
