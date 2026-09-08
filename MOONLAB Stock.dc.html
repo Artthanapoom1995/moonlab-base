@@ -510,6 +510,7 @@
             <button onClick="{{ c.go }}" style="{{ c.style }}">{{ c.label }}</button>
           </sc-for>
           <button onClick="{{ addProduct }}" style="border:none;background:#1B1A18;color:#F6F4F0;border-radius:10px;padding:10px 18px;font-size:13px;font-weight:500;cursor:pointer;flex:none;white-space:nowrap" style-hover="background:#332F2A">+ เพิ่มสินค้า</button>
+          <button onClick="{{ openBulkPrice }}" style="border:1px solid #D8A05E;background:#FBF5ED;color:#8A6E33;border-radius:10px;padding:10px 18px;font-size:13px;font-weight:500;cursor:pointer;flex:none;white-space:nowrap" style-hover="background:#F0E8D5">฿ ตั้งราคาเหมา ({{ filteredCount }})</button>
         </div>
 
         <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px;align-items:center">
@@ -2360,6 +2361,11 @@ class Component extends DCLogic {
     if (!p) return;
     this.setState({ editingId: id, editingField: 'cat', editingValue: p.cat });
   }
+  /* ตั้งราคาเดียวกันให้ทุกตัวที่กำลังกรอง/ค้นหาอยู่ตอนนี้ (หมวด + สถานะขาย + คำค้นหา)
+     ใช้ modal เดียวกับแก้ชื่อ/หมวดสินค้า เพิ่มโหมด 'bulkPrice' เข้าไป */
+  openBulkPrice = () => {
+    this.setState({ editingId: '__bulk__', editingField: 'bulkPrice', editingValue: '' });
+  };
   addProduct = () => {
     const newId = 'x' + Date.now();
     const newProduct = {
@@ -2385,6 +2391,22 @@ class Component extends DCLogic {
     if (!st.editingId) return;
     const v = st.editingValue.trim();
     if (!v) return this.cancelEdit();
+
+    if (st.editingField === 'bulkPrice') {
+      const newPrice = num(v);
+      if (!(newPrice > 0)) return this.cancelEdit();
+      /* กรองด้วยเงื่อนไขเดียวกับตารางที่กำลังโชว์อยู่เป๊ะ (หมวด + สถานะขาย + คำค้นหา) ไม่รวมของแถม */
+      const matchIds = new Set(st.products.filter(p => !p.gift
+        && (st.cat === 'ทั้งหมด' || p.cat === st.cat)
+        && (st.statusFilter === 'ทั้งหมด' || productStatus(p) === st.statusFilter)
+        && (!st.pq || (p.name + ' ' + p.variant).toLowerCase().indexOf(st.pq.toLowerCase()) >= 0)
+      ).map(p => p.id));
+      this.set({ products: st.products.map(p => matchIds.has(p.id) ? { ...p, price: newPrice } : p) });
+      this.ok('ตั้งราคา ' + nf(newPrice) + ' ฿ ให้ ' + matchIds.size + ' รายการแล้ว');
+      this.setState({ editingId: '', editingField: '', editingValue: '', draftNewId: '' });
+      return;
+    }
+
     this.set({
       products: st.products.map(p => p.id === st.editingId
         ? (st.editingField === 'name' ? { ...p, name: v, short: v } : { ...p, cat: v })
@@ -2894,10 +2916,13 @@ class Component extends DCLogic {
       }),
       stockFootnote: 'แสดง ' + Math.min(60, filtered.length) + ' จาก ' + filtered.length + ' รายการ · แก้คงเหลือ ราคาขาย ต้นทุนได้ทันที · กำไร/ชิ้น คิดที่ค่าธรรมเนียมแพลตฟอร์ม 8% ยังไม่หักค่าส่งและค่าโฆษณา',
       addProduct: this.addProduct,
+      openBulkPrice: this.openBulkPrice,
+      filteredCount: nf(filtered.length),
       showEditModal: st.editingId !== '',
       editModalTitle: st.draftNewId && st.draftNewId === st.editingId ? 'ตั้งชื่อสินค้าใหม่'
-        : st.editingField === 'name' ? 'แก้ไขชื่อสินค้า' : st.editingField === 'cat' ? 'แก้ไขหมวดสินค้า' : '',
-      editPlaceholder: st.editingField === 'name' ? 'ชื่อสินค้า' : 'ชื่อหมวด',
+        : st.editingField === 'name' ? 'แก้ไขชื่อสินค้า' : st.editingField === 'cat' ? 'แก้ไขหมวดสินค้า'
+        : st.editingField === 'bulkPrice' ? 'ตั้งราคาให้ ' + nf(filtered.length) + ' รายการที่กรองอยู่ตอนนี้' : '',
+      editPlaceholder: st.editingField === 'name' ? 'ชื่อสินค้า' : st.editingField === 'bulkPrice' ? 'ราคาใหม่ (บาท)' : 'ชื่อหมวด',
       isEditCat: st.editingField === 'cat',
       editingValue: st.editingValue,
       onEditingValue: e => this.setState({ editingValue: e.target.value }),
