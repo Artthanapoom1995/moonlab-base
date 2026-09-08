@@ -366,9 +366,8 @@
               <sc-for list="{{ giftRows }}" as="g" hint-placeholder-count="0">
                 <div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-top:1px solid #F2EFE8">
                   <div style="flex:1;min-width:0">
-                    <input value="{{ g.name }}" onChange="{{ g.onName }}" placeholder="ของแถมที่ให้ลูกค้า เช่น ถุงผ้า" style="width:100%;border:1px solid #E0DBD2;background:#FFFDFA;border-radius:8px;padding:7px 9px;font-size:12.5px" />
-                    <select value="{{ g.cat }}" onChange="{{ g.onCat }}" style="width:100%;margin-top:5px;border:1px solid #E8E3DA;background:#FDFCF9;border-radius:8px;padding:5px 7px;font-size:10.5px;color:#8C867C">
-                      <sc-for list="{{ g.cats }}" as="o" hint-placeholder-count="2">
+                    <select value="{{ g.pkgName }}" onChange="{{ g.onPkgName }}" style="width:100%;border:1px solid #E0DBD2;background:#FFFDFA;border-radius:8px;padding:7px 9px;font-size:12.5px">
+                      <sc-for list="{{ g.pkgOptions }}" as="o" hint-placeholder-count="3">
                         <option value="{{ o.id }}">{{ o.label }}</option>
                       </sc-for>
                     </select>
@@ -387,7 +386,7 @@
                 </div>
               </sc-for>
               <button onClick="{{ addGift }}" style="width:100%;border:1px dashed #DCD7CE;background:transparent;color:#8C867C;border-radius:11px;padding:10px;font-size:12px;font-weight:400;cursor:pointer;margin-top:10px" style-hover="background:#F1EEE7;color:#1B1A18">+ ของแถมที่ให้ลูกค้า</button>
-              <div style="font-size:10.5px;font-weight:300;color:#A19A8E;margin-top:6px;line-height:1.5">พิมพ์ชื่อของแถมกับตั้งราคาเอง · แถมฟรีใส่ราคา 0 · ไม่ตัดสต็อกสินค้า แต่ตัดอุปกรณ์แพคตามหมวดที่เลือก</div>
+              <div style="font-size:10.5px;font-weight:300;color:#A19A8E;margin-top:6px;line-height:1.5">เลือกอุปกรณ์แพคที่จะแถม ตั้งราคาเอง · แถมฟรีใส่ราคา 0 · ตัดสต็อกอุปกรณ์แพคชิ้นที่เลือกโดยตรง</div>
               <sc-if value="{{ cartHas }}">
                 <div>
                   <sc-for list="{{ cartSummary }}" as="s" hint-placeholder-count="0">
@@ -2094,17 +2093,12 @@ class Component extends DCLogic {
      ไม่ใช่สินค้าในสต็อก จึงไม่ต้องมีอยู่ในรายการสินค้าก่อน พิมพ์ชื่อกับตั้งราคาเอาเองตอนบันทึก
      ตอนกดบันทึกจะสร้าง (หรือใช้ซ้ำ) รายการที่ติดธง gift ไว้ ซึ่งถูกซ่อนจากหน้าสินค้าและสต็อก
      ทำแบบนี้เพื่อให้รายงาน กราฟ และการคิดกำไรส่วนอื่นใช้โค้ดเดิมได้ทั้งหมด ไม่ต้องแก้ทีละจุด */
-  giftCats() {
-    const r = Object.keys(this.rules());
-    return r.length ? r : Object.keys(RULES);
-  }
-
   addGift = () => {
-    const cats = this.giftCats();
+    const first = (this.state.pkg[0] || {}).name || '';
     this.setState({
       gifts: [...(this.state.gifts || []), {
         key: 'g' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
-        name: '', cat: cats[0] || '', qty: 1, price: '0'
+        pkgName: first, qty: 1, price: '0'
       }],
       toast: ''
     });
@@ -2122,14 +2116,15 @@ class Component extends DCLogic {
     this.setState({ gifts: (this.state.gifts || []).filter(g => g.key !== key) });
   }
 
-  /* หาตัวเดิมที่ชื่อกับหมวดตรงกันก่อน จะได้ไม่งอกรายการใหม่ทุกครั้งที่แถมของชิ้นเดิม */
-  findOrMakeGift(products, name, cat) {
-    const key = normTh(name) + '|' + normTh(cat);
-    const hit = products.find(p => p.gift && normTh(p.name) + '|' + normTh(p.cat) === key);
+  /* หาตัวเดิมที่แถมของชิ้นนี้ไปแล้วก่อน จะได้ไม่งอกรายการใหม่ทุกครั้งที่แถมของเดิม
+     ของแถมตอนนี้คืออุปกรณ์แพคชิ้นหนึ่งที่เลือกจากสต็อกโดยตรง ไม่ใช่สินค้าสมมติที่ผูกกับหมวดอีกต่อไป */
+  findOrMakeGift(products, pkgName) {
+    const key = normTh(pkgName);
+    const hit = products.find(p => p.gift && normTh(p.name) === key);
     if (hit) return { products, p: hit };
     const p = {
       id: 'gift' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
-      name, short: name, cat, variant: 'ของแถม',
+      name: pkgName, short: pkgName, cat: '', variant: 'ของแถม',
       price: 0, cost: 0, stock: 0, gift: true
     };
     return { products: [...products, p], p };
@@ -2139,7 +2134,7 @@ class Component extends DCLogic {
 
   saveCart = () => {
     const st = this.state;
-    const giftList = (st.gifts || []).filter(g => String(g.name || '').trim());
+    const giftList = (st.gifts || []).filter(g => String(g.pkgName || '').trim());
     if (!st.cart.length && !giftList.length) return;
     const ch = CHANNELS.find(c => c.name === st.ch) || CHANNELS[0];
     const chFeePct = this.chFee(ch.name);   /* เก็บ % ณ วันที่ขายติดไปกับรายการ ปรับ % ทีหลังจึงไม่กระทบยอดเก่า */
@@ -2156,10 +2151,10 @@ class Component extends DCLogic {
     /* ของแถม: สร้างรายการที่ติดธง gift ไว้ (หรือใช้ตัวเดิมถ้าเคยแถมชื่อนี้แล้ว)
        ราคาที่กรอกใช้ตามที่กรอกจริง กรอก 0 = แถมฟรี ไม่มีรายได้เข้า */
     giftList.forEach(g => {
-      const r = this.findOrMakeGift(products, String(g.name).trim(), g.cat);
+      const r = this.findOrMakeGift(products, String(g.pkgName).trim());
       products = r.products;
       const price = num(g.price);
-      lines.push({ c: { qty: g.qty }, p: r.p, price, sub: price * g.qty, gift: true });
+      lines.push({ c: { qty: g.qty }, p: r.p, price, sub: price * g.qty, gift: true, pkgName: g.pkgName });
     });
 
     if (!lines.length) return;
@@ -2184,10 +2179,14 @@ class Component extends DCLogic {
         price: l.price, disc: d, ship: sh, ch: ch.name, fee: chFeePct
       });
 
-      /* ของแถมไม่มีสต็อกให้ตัด แต่ยังกินอุปกรณ์แพคตามหมวดที่เลือก */
-      if (!l.gift) products = products.map(x => x.id === l.p.id ? withStock(x, x.stock - l.c.qty) : x);
-      const rule = this.rule(l.p.cat);
-      pkg = pkg.map(x => rule[x.name] ? { ...x, stock: x.stock - rule[x.name] * l.c.qty } : x);
+      /* ของแถมไม่มีสต็อกสินค้าให้ตัด แต่ตัดสต็อกอุปกรณ์แพคชิ้นที่เลือกโดยตรง (ไม่ผ่านสูตรตามหมวดเหมือนสินค้าปกติ) */
+      if (l.gift) {
+        pkg = pkg.map(x => x.name === l.pkgName ? { ...x, stock: x.stock - l.c.qty } : x);
+      } else {
+        products = products.map(x => x.id === l.p.id ? withStock(x, x.stock - l.c.qty) : x);
+        const rule = this.rule(l.p.cat);
+        pkg = pkg.map(x => rule[x.name] ? { ...x, stock: x.stock - rule[x.name] * l.c.qty } : x);
+      }
     });
 
     const nGift = lines.filter(l => l.gift).length;
@@ -2475,11 +2474,12 @@ class Component extends DCLogic {
       cUnits += c.qty; cSub += pr * c.qty; cCost += p.cost * c.qty; cPkg += this.pkgUnitCost(p.cat) * c.qty;
     });
     /* ของแถมยังไม่ได้เป็นรายการสินค้าจริงจนกว่าจะกดบันทึก จึงบวกยอดแยกตรงนี้
-       ราคาที่กรอกคือรายได้ (แถมฟรี = 0) ส่วนค่าแพคหักตามหมวดที่เลือก */
+       ราคาที่กรอกคือรายได้ (แถมฟรี = 0) ส่วนค่าแพคใช้ต้นทุนของอุปกรณ์ชิ้นที่เลือกโดยตรง */
     const giftLines = (st.gifts || []);
     giftLines.forEach(g => {
       const pr = num(g.price);
-      cUnits += g.qty; cSub += pr * g.qty; cPkg += this.pkgUnitCost(g.cat) * g.qty;
+      const gpk = st.pkg.find(x => x.name === g.pkgName);
+      cUnits += g.qty; cSub += pr * g.qty; cPkg += (gpk ? gpk.cost : 0) * g.qty;
     });
     const cGross = cSub - num(st.disc);
     const cFee = cGross * chFee / 100;
@@ -2778,17 +2778,16 @@ class Component extends DCLogic {
       addGift: this.addGift,
       giftRows: (st.gifts || []).map(g => {
         const pr = num(g.price);
-        const net = pr * g.qty - pr * g.qty * chFee / 100 - this.pkgUnitCost(g.cat) * g.qty;
+        const gpk = st.pkg.find(x => x.name === g.pkgName);
+        const net = pr * g.qty - pr * g.qty * chFee / 100 - (gpk ? gpk.cost : 0) * g.qty;
         return {
-          name: g.name, price: g.price, qty: g.qty,
-          cats: this.giftCats().map(c => ({ id: c, label: c })),
-          cat: g.cat,
+          pkgName: g.pkgName, price: g.price, qty: g.qty,
+          pkgOptions: st.pkg.map(p => ({ id: p.name, label: p.name + ' (เหลือ ' + nf(p.stock) + ')' })),
           line: nf(pr * g.qty) + ' ฿',
           net: (net >= 0 ? '+' : '−') + nf(Math.abs(net)) + ' ฿',
           netColor: net >= 0 ? GREEN : RED,
-          onName: e => this.editGift(g.key, { name: e.target.value }),
+          onPkgName: e => this.editGift(g.key, { pkgName: e.target.value }),
           onPrice: e => this.editGift(g.key, { price: e.target.value }),
-          onCat: e => this.editGift(g.key, { cat: e.target.value }),
           plus: () => this.bumpGift(g.key, 1),
           minus: () => this.bumpGift(g.key, -1),
           del: () => this.delGift(g.key)
