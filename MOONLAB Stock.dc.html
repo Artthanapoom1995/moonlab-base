@@ -2684,27 +2684,19 @@ class Component extends DCLogic {
           transform: 'translate(-50%, 50%)'
         }
       })),
-      chartPeaks: (() => {
-        const nonZero = series.map((s, i) => i).filter(i => barVals[i] > 0);
-        if (nonZero.length < 2) return [];
-        const ranked = nonZero.sort((a, b) => barVals[b] - barVals[a]).slice(0, 3);
-        const rankColor = {};
-        const colors = ['#5A7A63', '#C0913C', '#A97264'];
-        ranked.forEach((i, r) => { rankColor[i] = colors[r]; });
-        const idx = ranked.slice().sort((a, b) => a - b);
-        return idx.map(i => ({
-          label: nf(barVals[i]) + ' ฿',
-          style: {
-            position: 'absolute',
-            left: (i / (series.length - 1 || 1)) * 100 + '%',
-            bottom: 'calc(' + Math.max(0, barVals[i] / barMax) * 92 + '% + 14px)',
-            transform: 'translateX(-50%)',
-            background: rankColor[i], color: '#FFFDFA',
-            fontSize: 11, fontWeight: 600, padding: '4px 9px', borderRadius: 999,
-            whiteSpace: 'nowrap', pointerEvents: 'none'
-          }
-        }));
-      })(),
+      /* โชว์ยอดเงินตัวเลขธรรมดาที่ทุกจุดที่มียอดขาย (ตัดจุด 0 ฿ ทิ้งกันข้อความรก)
+         เดิมไฮไลต์แค่ 3 อันดับแรกด้วยป้ายสี ตอนนี้ตัดเรื่องจัดอันดับออก โชว์ทุกจุดเท่ากันหมด */
+      chartPeaks: series.map((s, i) => i).filter(i => barVals[i] > 0).map(i => ({
+        label: nf(barVals[i]) + ' ฿',
+        style: {
+          position: 'absolute',
+          left: (i / (series.length - 1 || 1)) * 100 + '%',
+          bottom: 'calc(' + Math.max(0, barVals[i] / barMax) * 92 + '% + 14px)',
+          transform: 'translateX(-50%)',
+          color: '#6E6860', fontSize: 10.5, fontWeight: 500,
+          whiteSpace: 'nowrap', pointerEvents: 'none'
+        }
+      })),
       yTicks: (() => {
         const steps = 5, out = [];
         for (let i = steps; i >= 0; i--) out.push({ label: nf(barMax * i / steps) });
