@@ -535,7 +535,7 @@
               <div style="text-align:center;font-size:12px;font-weight:400;color:#A19A8E">{{ s.sku }}</div>
               <button onClick="{{ s.toggleStatus }}" title="{{ s.statusTitle }}" style="border:none;background:transparent;cursor:pointer;font-size:15px;line-height:1;padding:4px;width:100%;text-align:center">{{ s.statusIcon }}</button>
               <div style="min-width:0">
-                <div title="{{ s.fullName }}" style="font-size:13px;font-weight:400;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ s.name }}</div>
+                <div title="{{ s.fullName }}" onClick="{{ s.toggleExpand }}" style="{{ s.nameStyle }}">{{ s.name }}</div>
                 <div style="font-size:10.5px;font-weight:300;color:#A19A8E;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ s.variant }}</div>
               </div>
               <span style="font-size:11.5px;font-weight:300;color:#8C867C;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ s.cat }}</span>
@@ -1183,7 +1183,7 @@ function tab(active) {
 class Component extends DCLogic {
   state = {
     tab: 'dash', loaded: false, products: [], sales: [], pkg: [], adSpend: {}, rules: RULES,
-    date: today(), q: '', pq: '', cat: 'ทั้งหมด', statusFilter: 'ทั้งหมด', sort: 'default', selId: '',
+    date: today(), q: '', pq: '', cat: 'ทั้งหมด', statusFilter: 'ทั้งหมด', sort: 'default', selId: '', expandRow: '',
     qty: '1', price: '', disc: '', ship: '', ch: 'TikTok Shop',
     range: 7, budget: '20000', toast: '',
     newPkgName: '', newPkgCost: '', newPkgStock: '',
@@ -2346,6 +2346,10 @@ class Component extends DCLogic {
         ? { ...p, status: productStatus(p) === 'active' ? 'paused' : 'active' } : p)
     });
   }
+  /* กดชื่อสินค้าในตารางเพื่อขยายดูชื่อเต็ม — บางชื่อยาวเกินจนโดนตัดด้วย ... */
+  toggleExpandRow(id) {
+    this.setState({ expandRow: this.state.expandRow === id ? '' : id });
+  }
   openEditName(id) {
     const p = this.byId(id);
     if (!p) return;
@@ -2859,8 +2863,15 @@ class Component extends DCLogic {
         const pk = this.pkgUnitCost(p.cat);
         const m = p.price - p.cost - pk - p.price * 0.08;
         const active = productStatus(p) === 'active';
+        const expanded = st.expandRow === p.id;
+        /* p.short อาจถูกตัดด้วย ... ไว้ตั้งแต่ตอนสร้างข้อมูลแล้ว (ชื่อยาวเกิน 72 ตัวอักษรและไม่มีชื่อเล่นในเครื่องหมายคำพูด)
+           แค่เอา CSS ที่ตัดบรรทัดออกไม่พอ ต้องสลับไปโชว์ p.name (ชื่อเต็มจริง) ตอนขยายด้วย */
         return {
-          sku: i + 1, name: p.short, fullName: p.name, variant: p.variant || '—', cat: p.cat,
+          sku: i + 1, name: expanded ? p.name : p.short, fullName: p.name, variant: p.variant || '—', cat: p.cat,
+          nameStyle: 'font-size:13px;font-weight:400;cursor:pointer;' + (expanded
+            ? 'white-space:normal;overflow-wrap:break-word'
+            : 'white-space:nowrap;overflow:hidden;text-overflow:ellipsis'),
+          toggleExpand: () => this.toggleExpandRow(p.id),
           statusIcon: active ? '🟢' : '🔴',
           statusTitle: active ? 'ขายอยู่ · กดเพื่อหยุดขาย' : 'หยุดขาย · กดเพื่อเปิดขาย',
           toggleStatus: () => this.toggleProductStatus(p.id),
