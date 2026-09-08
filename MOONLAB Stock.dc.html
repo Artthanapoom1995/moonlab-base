@@ -513,6 +513,13 @@
         </div>
 
         <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px;align-items:center">
+          <span style="font-size:11.5px;font-weight:400;color:#9A9388;letter-spacing:0.04em;flex:none">สถานะขาย</span>
+          <sc-for list="{{ statusFilters }}" as="v" hint-placeholder-count="3">
+            <button onClick="{{ v.go }}" style="{{ v.style }}">{{ v.label }}</button>
+          </sc-for>
+        </div>
+
+        <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px;align-items:center">
           <span style="font-size:11.5px;font-weight:400;color:#9A9388;letter-spacing:0.04em;flex:none">เรียงตาม</span>
           <sc-for list="{{ sortFilters }}" as="s" hint-placeholder-count="3">
             <button onClick="{{ s.go }}" style="{{ s.style }}">{{ s.label }}</button>
@@ -520,12 +527,13 @@
         </div>
 
         <div style="background:#FFFDFA;border:1px solid #EBE7DF;border-radius:16px;overflow-x:auto">
-          <div style="display:grid;grid-template-columns:44px minmax(160px,1fr) 104px 104px 84px 86px 86px 74px 88px 72px;min-width:1030px;gap:10px;padding:13px clamp(14px,3vw,22px);background:#FBF9F5;border-bottom:1px solid #EFEBE3;font-size:11px;font-weight:400;color:#9A9388;letter-spacing:0.06em">
-            <span style="text-align:center">#</span><span>สินค้า</span><span>หมวด</span><span style="text-align:right">คงเหลือ</span><span style="text-align:right">ขาย 30 วัน</span><span style="text-align:right">ราคาขาย</span><span style="text-align:right">ต้นทุน</span><span style="text-align:right">ค่าแพค</span><span style="text-align:right">กำไร/ชิ้น</span><span></span>
+          <div style="display:grid;grid-template-columns:44px 38px minmax(160px,1fr) 104px 104px 84px 86px 86px 74px 88px 72px;min-width:1068px;gap:10px;padding:13px clamp(14px,3vw,22px);background:#FBF9F5;border-bottom:1px solid #EFEBE3;font-size:11px;font-weight:400;color:#9A9388;letter-spacing:0.06em">
+            <span style="text-align:center">#</span><span></span><span>สินค้า</span><span>หมวด</span><span style="text-align:right">คงเหลือ</span><span style="text-align:right">ขาย 30 วัน</span><span style="text-align:right">ราคาขาย</span><span style="text-align:right">ต้นทุน</span><span style="text-align:right">ค่าแพค</span><span style="text-align:right">กำไร/ชิ้น</span><span></span>
           </div>
           <sc-for list="{{ stockRows }}" as="s" hint-placeholder-count="10">
-            <div style="display:grid;grid-template-columns:44px minmax(160px,1fr) 104px 104px 84px 86px 86px 74px 88px 72px;min-width:1030px;gap:10px;align-items:center;padding:11px clamp(14px,3vw,22px);border-bottom:1px solid #F5F2EC">
+            <div style="display:grid;grid-template-columns:44px 38px minmax(160px,1fr) 104px 104px 84px 86px 86px 74px 88px 72px;min-width:1068px;gap:10px;align-items:center;padding:11px clamp(14px,3vw,22px);border-bottom:1px solid #F5F2EC">
               <div style="text-align:center;font-size:12px;font-weight:400;color:#A19A8E">{{ s.sku }}</div>
+              <button onClick="{{ s.toggleStatus }}" title="{{ s.statusTitle }}" style="border:none;background:transparent;cursor:pointer;font-size:15px;line-height:1;padding:4px;width:100%;text-align:center">{{ s.statusIcon }}</button>
               <div style="min-width:0">
                 <div title="{{ s.fullName }}" style="font-size:13px;font-weight:400;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ s.name }}</div>
                 <div style="font-size:10.5px;font-weight:300;color:#A19A8E;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ s.variant }}</div>
@@ -1044,6 +1052,15 @@
 <script type="text/x-dc" data-dc-script data-props="{}">
 const KEY = 'moonlab_stock_v1';
 const LEAD = 15, SAFETY = 7, THRESHOLD = 8;
+
+/* สถานะขายของสินค้า: 'active' (ค่าเริ่มต้นถ้าไม่มีค่า) หรือ 'paused'
+   สต็อกเป็น 0 = แสดงหยุดขายเสมอ ไม่ว่าจะตั้งค่า status ไว้เป็นอะไร (คำนวณสด ไม่ต้องเขียนทับ)
+   ตอนสต็อกกลับมาจาก 0 เป็นบวก (เติมของ) ให้ auto กลับเป็นขายเสมอ แม้เคยตั้งหยุดขายด้วยมือไว้ก่อนหน้า */
+const productStatus = p => (p.stock > 0 && p.status !== 'paused') ? 'active' : 'paused';
+const nextStockStatus = (oldStock, newStock, oldStatus) =>
+  (oldStock <= 0 && newStock > 0) ? 'active' : oldStatus;
+/* ใช้แทนที่ทุกจุดที่เขียน stock ใหม่ให้สินค้า จะได้ไม่ลืมจุดใดจุดหนึ่ง */
+const withStock = (p, newStock) => ({ ...p, stock: newStock, status: nextStockStatus(p.stock, newStock, p.status) });
 /* จำนวนหลักของรหัสเข้าใช้งาน — ต้องยาวเท่ากับ secret APP_PIN ที่ตั้งไว้ใน Worker
    3 หลักมีแค่ 1,000 แบบ ไล่เดาหมดในไม่กี่วินาที จึงขยับเป็น 6 */
 const PIN_LEN = 6;
@@ -1166,7 +1183,7 @@ function tab(active) {
 class Component extends DCLogic {
   state = {
     tab: 'dash', loaded: false, products: [], sales: [], pkg: [], adSpend: {}, rules: RULES,
-    date: today(), q: '', pq: '', cat: 'ทั้งหมด', sort: 'default', selId: '',
+    date: today(), q: '', pq: '', cat: 'ทั้งหมด', statusFilter: 'ทั้งหมด', sort: 'default', selId: '',
     qty: '1', price: '', disc: '', ship: '', ch: 'TikTok Shop',
     range: 7, budget: '20000', toast: '',
     newPkgName: '', newPkgCost: '', newPkgStock: '',
@@ -1685,7 +1702,7 @@ class Component extends DCLogic {
       const qty = Math.max(1, Math.round(num(r.qty)));
       const price = num(r.price) || p.price;
       sales.push({ id: 'lb' + Date.now() + '_' + i, date: r.date, sku: p.id, qty, price, disc: 0, ship: 0, ch: ch.name, fee: this.chFee(ch.name), oid: r.oid });
-      products = products.map(x => x.id === p.id ? { ...x, stock: x.stock - qty } : x);
+      products = products.map(x => x.id === p.id ? withStock(x, x.stock - qty) : x);
       const rule = this.rule(p.cat);
       pkg = pkg.map(x => rule[x.name] ? { ...x, stock: x.stock - rule[x.name] * qty } : x);
     });
@@ -1909,7 +1926,7 @@ class Component extends DCLogic {
               ...(price > 0 && { price }),
               ...(cost > 0 && { cost }),
               ...(cat && { cat }),
-              ...(stock !== null && { stock })
+              ...(stock !== null && { stock, status: nextStockStatus(p.stock, stock, p.status) })
             } : p);
             updated++;
           } else {
@@ -2167,7 +2184,7 @@ class Component extends DCLogic {
       });
 
       /* ของแถมไม่มีสต็อกให้ตัด แต่ยังกินอุปกรณ์แพคตามหมวดที่เลือก */
-      if (!l.gift) products = products.map(x => x.id === l.p.id ? { ...x, stock: x.stock - l.c.qty } : x);
+      if (!l.gift) products = products.map(x => x.id === l.p.id ? withStock(x, x.stock - l.c.qty) : x);
       const rule = this.rule(l.p.cat);
       pkg = pkg.map(x => rule[x.name] ? { ...x, stock: x.stock - rule[x.name] * l.c.qty } : x);
     });
@@ -2197,7 +2214,7 @@ class Component extends DCLogic {
     const p = this.byId(s.sku);
     let products = st.products, pkg = st.pkg;
     if (p && !s.demo) {
-      products = st.products.map(x => x.id === p.id ? { ...x, stock: x.stock + s.qty } : x);
+      products = st.products.map(x => x.id === p.id ? withStock(x, x.stock + s.qty) : x);
       const r = this.rule(p.cat);
       pkg = st.pkg.map(x => r[x.name] ? { ...x, stock: x.stock + r[x.name] * s.qty } : x);
     }
@@ -2239,7 +2256,7 @@ class Component extends DCLogic {
     const dq = qty - s.qty;
     const p = this.byId(s.sku);
     if (p && !s.demo && dq !== 0) {
-      products = products.map(x => x.id === p.id ? { ...x, stock: x.stock - dq } : x);
+      products = products.map(x => x.id === p.id ? withStock(x, x.stock - dq) : x);
       const rule = this.rule(p.cat);
       pkg = pkg.map(x => rule[x.name] ? { ...x, stock: x.stock - rule[x.name] * dq } : x);
     }
@@ -2270,7 +2287,7 @@ class Component extends DCLogic {
     doomed.forEach(s => {
       if (s.demo) return;                       /* ข้อมูลตัวอย่างไม่เคยตัดสต็อก จึงไม่ต้องคืน */
       const p = this.byId(s.sku); if (!p) return;
-      products = products.map(x => x.id === p.id ? { ...x, stock: x.stock + s.qty } : x);
+      products = products.map(x => x.id === p.id ? withStock(x, x.stock + s.qty) : x);
       const r = this.rule(p.cat);
       pkg = pkg.map(x => r[x.name] ? { ...x, stock: x.stock + r[x.name] * s.qty } : x);
     });
@@ -2308,9 +2325,25 @@ class Component extends DCLogic {
   }
 
   editProduct(id, field, v) {
+    if (field === 'stock') {
+      this.set({
+        numDraft: this.withDraft('p:stock:' + id, v),
+        products: this.state.products.map(p => p.id === id ? withStock(p, Math.max(0, num(v))) : p)
+      });
+      return;
+    }
     this.set({
       numDraft: this.withDraft('p:' + field + ':' + id, v),
       products: this.state.products.map(p => p.id === id ? { ...p, [field]: Math.max(0, num(v)) } : p)
+    });
+  }
+  /* กดปุ่มอิโมจิสถานะ — สลับขาย/หยุดขายด้วยมือ
+     กดตอนสต็อก 0 ได้เหมือนกัน แต่จะยังโชว์แดงอยู่ดีเพราะสต็อก 0 บังคับแสดงหยุดขายเสมอ
+     พอเติมสต็อกกลับมาค่อยมีผลจริง (ถ้าตอนนั้นตั้งไว้ว่าขาย ก็จะขายทันที) */
+  toggleProductStatus(id) {
+    this.set({
+      products: this.state.products.map(p => p.id === id
+        ? { ...p, status: productStatus(p) === 'active' ? 'paused' : 'active' } : p)
     });
   }
   openEditName(id) {
@@ -2429,6 +2462,7 @@ class Component extends DCLogic {
     const cats = ['ทั้งหมด', ...Object.keys(RULES).filter(c => P.some(p => p.cat === c))];
     const filtered = P.filter(p =>
       (st.cat === 'ทั้งหมด' || p.cat === st.cat) &&
+      (st.statusFilter === 'ทั้งหมด' || productStatus(p) === st.statusFilter) &&
       (!st.pq || (p.name + ' ' + p.variant).toLowerCase().indexOf(st.pq.toLowerCase()) >= 0));
     /* เรียงลำดับที่ร้านเลือกเอง — localeCompare('th') เพื่อให้ ก-ฮ เรียงตามพจนานุกรมไทย ไม่ใช่ตามรหัสตัวอักษร */
     if (st.sort === 'name') filtered.sort((a, b) => String(a.short || a.name).localeCompare(String(b.short || b.name), 'th'));
@@ -2568,6 +2602,12 @@ class Component extends DCLogic {
         go: () => this.setState({ ch: c.name })
       })),
       catFilters: cats.map(c => ({ label: c, style: pill(st.cat === c), go: () => this.setState({ cat: c }) })),
+      statusFilters: ['ทั้งหมด', 'active', 'paused'].map(v => ({
+        key: v,
+        label: v === 'ทั้งหมด' ? 'ทั้งหมด' : v === 'active' ? '🟢 ขายอยู่' : '🔴 หยุดขาย',
+        style: pill(st.statusFilter === v),
+        go: () => this.setState({ statusFilter: v })
+      })),
       sortFilters: [
         { key: 'default', label: 'ลำดับเดิม' },
         { key: 'name', label: 'ชื่อ ก–ฮ' },
@@ -2818,8 +2858,12 @@ class Component extends DCLogic {
       stockRows: filtered.slice(0, 60).map((p, i) => {
         const pk = this.pkgUnitCost(p.cat);
         const m = p.price - p.cost - pk - p.price * 0.08;
+        const active = productStatus(p) === 'active';
         return {
           sku: i + 1, name: p.short, fullName: p.name, variant: p.variant || '—', cat: p.cat,
+          statusIcon: active ? '🟢' : '🔴',
+          statusTitle: active ? 'ขายอยู่ · กดเพื่อหยุดขาย' : 'หยุดขาย · กดเพื่อเปิดขาย',
+          toggleStatus: () => this.toggleProductStatus(p.id),
           sold: (sold30[p.id] || 0) + ' ชิ้น',
           stock: this.draftVal('p:stock:' + p.id, p.stock),
           onStockBlur: this.clearDraft('p:stock:' + p.id),
