@@ -1438,21 +1438,40 @@ class Component extends DCLogic {
   };
 
   componentDidMount() {
+    /* เริ่มโหลดข้อมูลทันที ไม่รอผล /api/session — ถ้ารอก่อนจะมีช่วงว่างให้แข่งกับ
+       cloud.js ที่โหลดแบบ async โดยไม่จำเป็น (ดูรายละเอียดใน boot()) */
+    this.boot();
+
     /* ปลดล็อกหรือยัง ให้เซิร์ฟเวอร์เป็นคนตอบ (cookie เป็น HttpOnly หน้าเว็บอ่านเองไม่ได้)
        เดิมใช้ sessionStorage ซึ่งฝั่งเบราว์เซอร์ตั้งค่าเองได้ จึงกันอะไรไม่ได้เลย */
     fetch("/api/session", { credentials: "same-origin" })
       .then(r => r.json())
-      .then(s => {
-        this.setState({ locked: !s.ok, authChecked: true });
-        if (s.ok) this.boot();
-      })
+      .then(s => this.setState({ locked: !s.ok, authChecked: true }))
       .catch(() => this.setState({ locked: true, authChecked: true }));
+  }
+
+  /* cloud.js อยู่ใน <helmet> ซึ่ง design-canvas runtime คัดลอกเข้า <head> อีกที
+     สคริปต์ที่ถูกแทรกแบบนี้โหลดแบบ async เสมอ ไม่ผูกกับลำดับเอกสาร
+     ต่างจาก <script> ปกติที่บล็อกลำดับการรัน จึงมีจังหวะที่ window.MoonlabCloud
+     ยังไม่ถูกตั้งตอน boot() รันครั้งแรก (พบว่าเกิดขึ้นจริง ไม่ใช่แค่ทฤษฎี —
+     ถ้าไม่กันไว้ แอปจะคิดว่าออฟไลน์แล้วสร้างข้อมูลตัวอย่างมาแสดงแทนของจริง) */
+  waitForCloud(maxMs) {
+    if (window.MoonlabCloud) return Promise.resolve(window.MoonlabCloud);
+    return new Promise(resolve => {
+      const start = Date.now();
+      const iv = setInterval(() => {
+        if (window.MoonlabCloud || Date.now() - start > maxMs) {
+          clearInterval(iv);
+          resolve(window.MoonlabCloud || null);
+        }
+      }, 20);
+    });
   }
 
   /* ---- ข้อมูลกลาง
 : ลำดับคือ cache ในเครื่อง → คลาวด์ → products.json ---- */
   async boot() {
-    const cloud = window.MoonlabCloud;
+    const cloud = await this.waitForCloud(4000);
     const online = !!(cloud && cloud.configure(window.MOONLAB_CONFIG || {}));
     if (cloud) {
       this.setState({ who: cloud.who() });
