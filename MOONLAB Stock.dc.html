@@ -863,6 +863,69 @@
         <div style="font-size:11px;font-weight:400;letter-spacing:0.2em;color:#A19A8E;text-transform:uppercase;margin-bottom:7px">บัญชี</div>
         <div style="font-size:clamp(21px,4.4vw,26px);font-weight:400;letter-spacing:-0.01em;margin-bottom:24px">รายรับ-รายจ่าย</div>
 
+        <div style="background:#FFFDFA;border:1px solid #EBE7DF;border-radius:16px;padding:clamp(16px,3vw,22px) clamp(16px,3.2vw,24px);margin-bottom:12px">
+          <div style="display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin-bottom:12px">
+            <div style="font-size:13.5px;font-weight:500;flex:none">เงินจาก TikTok</div>
+            <sc-for list="{{ settleMonthTabs }}" as="m" hint-placeholder-count="2">
+              <button onClick="{{ m.go }}" style="{{ m.style }}">{{ m.label }}</button>
+            </sc-for>
+            <div style="flex:1;min-width:8px"></div>
+            <label style="border:1px dashed #25F4EE;background:#F0FFFE;border-radius:11px;padding:10px 15px;font-size:12px;font-weight:500;cursor:pointer;color:#0A5A56;flex:none" style-hover="background:#D4F9F7">
+              📊 รายงานการเงิน
+              <input type="file" accept=".xlsx,.xls" onChange="{{ onIncomeExcel }}" style="display:none" />
+            </label>
+          </div>
+          <div style="font-size:11.5px;font-weight:300;color:#8C867C;margin-bottom:14px;text-wrap:pretty">{{ settleNote }}</div>
+
+          <sc-if value="{{ hasSettle }}" hint-placeholder-val="{{ true }}">
+            <div>
+              <div style="font-size:11.5px;font-weight:300;color:#A19A8E;margin-bottom:14px">{{ settleHead }}</div>
+
+              <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:18px">
+                <sc-for list="{{ settleKpis }}" as="k" hint-placeholder-count="4">
+                  <div style="background:#FBF9F5;border:1px solid #EFEBE3;border-radius:14px;padding:15px 16px">
+                    <div style="font-size:11.5px;font-weight:400;color:#9A9388;margin-bottom:8px">{{ k.label }}</div>
+                    <div style="font-size:22px;font-weight:600;letter-spacing:-0.02em;color:{{ k.color }}">{{ k.value }}</div>
+                    <div style="font-size:11px;font-weight:300;color:#A19A8E;margin-top:5px">{{ k.sub }}</div>
+                  </div>
+                </sc-for>
+              </div>
+
+              <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px">
+                <div style="background:#FDF6F4;border:1px solid #EBD8D2;border-radius:14px;padding:16px 18px">
+                  <div style="font-size:12.5px;font-weight:500;color:#8C5A4E;margin-bottom:12px">TikTok หักอะไรไปบ้าง</div>
+                  <sc-for list="{{ feeRows }}" as="f" hint-placeholder-count="5">
+                    <div style="display:flex;align-items:baseline;gap:10px;padding:7px 0;border-top:1px solid #F2E6E2">
+                      <span style="flex:1;min-width:0;font-size:12px;font-weight:300;color:#6E6860">{{ f.label }}</span>
+                      <span style="font-size:12.5px;font-weight:500;color:{{ f.color }};white-space:nowrap">{{ f.value }}</span>
+                    </div>
+                  </sc-for>
+                  <div style="display:flex;align-items:baseline;gap:10px;padding:11px 0 2px;border-top:1.5px solid #E0CCC5;margin-top:6px">
+                    <span style="flex:1;font-size:12.5px;font-weight:500">รวมที่ถูกหัก</span>
+                    <span style="font-size:16px;font-weight:600;letter-spacing:-0.02em;color:#B4675C;white-space:nowrap">{{ feeTotal }}</span>
+                  </div>
+                </div>
+
+                <div style="background:#F6F8F4;border:1px solid #D9E2D4;border-radius:14px;padding:16px 18px">
+                  <div style="font-size:12.5px;font-weight:500;color:#4F6344;margin-bottom:12px">คิดเป็นกำไรสุทธิ</div>
+                  <sc-for list="{{ netRows }}" as="n" hint-placeholder-count="4">
+                    <div style="display:flex;align-items:baseline;gap:10px;padding:7px 0;border-top:1px solid #E6EDE2">
+                      <span style="flex:1;min-width:0;font-size:12px;font-weight:300;color:#6E6860">{{ n.label }}</span>
+                      <span style="font-size:12.5px;font-weight:500;color:{{ n.color }};white-space:nowrap">{{ n.value }}</span>
+                    </div>
+                  </sc-for>
+                  <div style="display:flex;align-items:baseline;gap:10px;padding:12px 0 2px;border-top:1.5px solid #C9D6C2;margin-top:6px">
+                    <span style="flex:1;font-size:12.5px;font-weight:500">กำไรสุทธิ {{ settleMonthLabel }}</span>
+                    <span style="font-size:19px;font-weight:600;letter-spacing:-0.02em;color:{{ netTotalColor }};white-space:nowrap">{{ netTotal }}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div style="font-size:11.5px;font-weight:400;color:#C09A54;margin-top:12px">{{ pendingLabel }}</div>
+            </div>
+          </sc-if>
+        </div>
+
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px;margin-bottom:12px">
           <sc-for list="{{ walletCards }}" as="w" hint-placeholder-count="3">
             <div style="background:#FFFDFA;border:1px solid #EBE7DF;border-radius:16px;padding:20px 22px">
@@ -1146,6 +1209,13 @@ const thDate = s => {
   const m = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
   return d.getDate() + ' ' + m[d.getMonth()] + ' ' + String(d.getFullYear() + 543).slice(2);
 };
+/* "2026-09" -> "ก.ย. 69" */
+const thMonth = s => {
+  const m = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
+  const p = String(s || '').split('-');
+  if (p.length < 2) return String(s || '');
+  return m[parseInt(p[1], 10) - 1] + ' ' + String(parseInt(p[0], 10) + 543).slice(2);
+};
 const decodeEnt = s => String(s || '')
   .replace(/&#x([0-9a-fA-F]+);/g, (m, h) => String.fromCodePoint(parseInt(h, 16)))
   .replace(/&#(\d+);/g, (m, d) => String.fromCodePoint(+d))
@@ -1200,6 +1270,7 @@ class Component extends DCLogic {
     orders: [], newOrderDate: today(), newOrderAmount: '', newOrderNote: '',
     planShowCats: Object.keys(RULES).reduce((a, c) => ({ ...a, [c]: true }), {}),
     ledger: [], newLedgerDate: today(), newLedgerType: 'income', newLedgerAmount: '', newLedgerNote: '', newLedgerWallet: WALLETS[0],
+    settle: [], settleNote: '', settleMonth: '',
     xferFrom: WALLETS[0], xferTo: WALLETS[1], xferAmount: '',
     locked: true, pin: "", pinErr: "", pinBusy: false, authChecked: false,
     sync: { state: 'local', msg: '' }, who: '',
@@ -1558,7 +1629,8 @@ class Component extends DCLogic {
     const st = this.state;
     return {
       products: st.products, sales: st.sales, pkg: st.pkg, adSpend: st.adSpend, rules: st.rules,
-      importedOrders: st.importedOrders, tasks: st.tasks, orders: st.orders, ledger: st.ledger, fees: st.fees, images: st.images
+      importedOrders: st.importedOrders, tasks: st.tasks, orders: st.orders, ledger: st.ledger, fees: st.fees, images: st.images,
+      settle: st.settle
     };
   }
 
@@ -1585,7 +1657,7 @@ class Component extends DCLogic {
       pkg: saved.pkg || PKG_DEFAULT.map(p => ({ ...p })), adSpend,
       rules: saved.rules || RULES, importedOrders: saved.importedOrders || [],
       tasks: saved.tasks || [], orders: saved.orders || [], ledger: saved.ledger || [],
-      fees: saved.fees || {}, images: saved.images || {}, loaded: true
+      fees: saved.fees || {}, images: saved.images || {}, settle: saved.settle || [], loaded: true
     }, () => { if (shift > 0) this.persist(); });
   }
 
@@ -1691,6 +1763,52 @@ class Component extends DCLogic {
     return { units, revenue, cost, ad, net: net - ad, orders: list.length };
   }
   dates(n, end) { const out = []; for (let i = n - 1; i >= 0; i--) out.push(addDays(end || today(), -i)); return out; }
+
+  /* สรุปเงินจริงของเดือนหนึ่ง จากรายงานการชำระเงินของ TikTok
+     ต่างจาก agg() ตรงที่ไม่เดาค่าธรรมเนียมเป็น % แต่ใช้ตัวเลขที่แพลตฟอร์มหักจริง
+     และนับเฉพาะออเดอร์ที่โอนเงินมาแล้วในเดือนนั้น จึงตรงกับยอดที่เข้าบัญชี */
+  settleSummary(month) {
+    const all = this.state.settle || [];
+    const rows = all.filter(s => s.paid && String(s.paid).slice(0, 7) === month);
+    const byOid = {};
+    (this.state.sales || []).forEach(s => { if (s.oid) (byOid[s.oid] = byOid[s.oid] || []).push(s); });
+    const t = { orders: rows.length, matched: 0, units: 0, revenue: 0, fees: 0, received: 0,
+      commission: 0, orderFee: 0, growth: 0, ship: 0, gmvAds: 0, cogs: 0, pkg: 0 };
+    /* ออเดอร์ที่มีทั้งแถวขายและแถวคืนเงิน ต้องคิดต้นทุนสินค้าครั้งเดียว ไม่ใช่ครั้งต่อแถว */
+    const costed = {};
+    rows.forEach(r => {
+      t.revenue += r.revenue; t.fees += r.fees; t.received += r.settled;
+      t.commission += r.commission; t.orderFee += r.orderFee; t.growth += r.growth;
+      t.ship += r.ship; t.gmvAds += r.ads;
+      const lines = byOid[r.oid];
+      if (!lines || !lines.length || costed[r.oid]) return;
+      costed[r.oid] = 1;
+      t.matched++;
+      lines.forEach(s => {
+        const p = this.byId(s.sku);
+        t.cogs += (p ? p.cost : 0) * s.qty;
+        t.pkg += this.pkgUnitCost(p ? p.cat : '') * s.qty;
+        t.units += s.qty;
+      });
+    });
+    /* ค่าธรรมเนียมทั้งหมดมีรายการย่อยมากกว่าที่แสดง ส่วนต่างจึงรวมไว้เป็น "อื่นๆ" ให้ยอดบวกกันลงตัว */
+    t.other = t.fees - (t.commission + t.orderFee + t.growth + t.ship + t.gmvAds);
+    t.ad = Object.keys(this.state.adSpend || {})
+      .filter(d => String(d).slice(0, 7) === month)
+      .reduce((a, d) => a + num(this.state.adSpend[d]), 0);
+    t.net = t.received - t.cogs - t.pkg - t.ad;
+    t.margin = t.revenue ? t.net / t.revenue * 100 : 0;
+    t.feeRate = t.revenue ? Math.abs(t.fees) / t.revenue * 100 : 0;
+    const pend = all.filter(s => !s.paid && s.pending);
+    t.pending = pend.reduce((a, r) => a + r.pending, 0);
+    t.pendingCount = pend.length;
+    return t;
+  }
+  settleMonths() {
+    const set = {};
+    (this.state.settle || []).forEach(s => { if (s.paid) set[String(s.paid).slice(0, 7)] = 1; });
+    return Object.keys(set).sort().reverse();
+  }
 
   editImport(id, patch) {
     this.setState({ importRows: this.state.importRows.map(r => r.id === id ? { ...r, ...patch } : r) });
@@ -1954,6 +2072,107 @@ class Component extends DCLogic {
         });
       } catch (err) {
         this.setState({ excelNote: 'อ่านไฟล์ไม่สำเร็จ: ' + (err && err.message ? err.message : 'ตรวจสอบรูปแบบไฟล์') });
+      }
+    };
+    reader.readAsArrayBuffer(file);
+  };
+
+  /* ---- นำเข้ารายงานการเงินของ TikTok ----
+     รับได้ทั้งไฟล์ "income" (เงินที่โอนแล้ว พร้อมค่าธรรมเนียมที่หักจริงทุกประเภท)
+     และไฟล์ "Onhold" (ออเดอร์ที่ยังไม่จ่าย) — จับคู่กับยอดขายด้วยหมายเลขคำสั่งซื้อ
+     ตัวเลขพวกนี้คือเงินจริงที่เข้าบัญชี ไม่ใช่ค่าประมาณ 8% ที่แอปเดาไว้ */
+  onIncomeExcel = e => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    this.setState({ settleNote: 'กำลังอ่าน ' + file.name + ' …' });
+    const reader = new FileReader();
+    reader.onload = async ev => {
+      try {
+        const wb = await this.parseXlsx(ev.target?.result);
+        const ws = wb[Object.keys(wb)[0]] || [];
+        /* ไฟล์ค้างจ่ายมีข้อสงวนสิทธิ์คั่นอยู่หลายบรรทัด หัวตารางจึงไม่ได้อยู่บรรทัดแรกเสมอ */
+        let hi = -1;
+        for (let i = 0; i < Math.min(12, ws.length); i++) {
+          if ((ws[i] || []).some(c => /หมายเลขคำสั่งซื้อ/.test(String(c || '')))) { hi = i; break; }
+        }
+        if (hi < 0) throw new Error('ไม่ใช่รายงานการเงินของ TikTok (ไม่พบคอลัมน์หมายเลขคำสั่งซื้อ)');
+        const H = (ws[hi] || []).map(c => String(c || '').trim());
+        const at = re => H.findIndex(h => re.test(h));
+        const iOid = at(/หมายเลขคำสั่งซื้อ/), iType = at(/ประเภทธุรกรรม/);
+        const iCreated = at(/เวลาที่สร้างคำสั่งซื้อ|วันที่สร้างคำสั่งซื้อ|วันที่สร้างธุรกรรม/);
+        const iPaid = at(/เวลาที่ชำระคำสั่งซื้อ/), iEstPaid = at(/เวลาการชำระเงินโดยประมาณ/);
+        const iSettled = at(/^ยอดการชำระเงินทั้งหมด$/), iEst = at(/จำนวนเงินที่ชำระโดยประมาณ/);
+        const iRev = at(/^รายได้ทั้งหมด$/), iFees = at(/^ค่าธรรมเนียมทั้งหมด$/);
+        const iComm = at(/ค่าคอมมิชชั่น TikTok Shop/), iOrderFee = at(/^ค่าธรรมเนียมคำสั่งซื้อ$/);
+        const iGrowth = at(/ค่าธรรมเนียมสนับสนุนการเติบโต/);
+        const iShip = at(/^ค่าธรรมเนียมการจัดส่งจริง$/), iShipSub = at(/ส่วนลดค่าธรรมเนียมการจัดส่งจากแพลตฟอร์ม/);
+        const iAds = at(/ค่าโฆษณา GMV Max/), iReason = at(/เหตุผลของการไม่ชำระเงิน/);
+        if (iOid < 0) throw new Error('ไฟล์นี้ไม่มีคอลัมน์หมายเลขคำสั่งซื้อ');
+        const paid = iSettled >= 0;
+
+        const cell = (r, i) => i >= 0 ? String(r[i] === undefined || r[i] === null ? '' : r[i]).trim() : '';
+        const val = (r, i) => i >= 0 ? num(cell(r, i)) : 0;
+        /* ไฟล์ชุดนี้เขียนวันที่แบบ 2026/09/12 หรือ 2026-09-12 08:43:25 */
+        const toDate = s => {
+          const m = /^(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})/.exec(String(s || '').trim());
+          return m ? m[1] + '-' + ('0' + m[2]).slice(-2) + '-' + ('0' + m[3]).slice(-2) : '';
+        };
+
+        /* ออเดอร์เดียวมีได้หลายธุรกรรม — ขายรอบแรกแล้วคืนเงินทีหลังใช้หมายเลขเดียวกัน
+           ถ้าคีย์ด้วยหมายเลขออเดอร์เฉยๆ รายการคืนเงินจะหายไปและกำไรจะเกินจริง */
+        const byId = {};
+        (this.state.settle || []).forEach(s => { byId[s.id || s.oid] = s; });
+        let added = 0, updated = 0, skipped = 0;
+        for (let i = hi + 1; i < ws.length; i++) {
+          const row = ws[i] || [];
+          const oid = cell(row, iOid);
+          if (!/^\d{6,}$/.test(oid)) { skipped++; continue; }
+          const rec = {
+            oid,
+            created: toDate(cell(row, iCreated)),
+            paid: paid ? toDate(cell(row, iPaid)) : '',
+            due: paid ? '' : toDate(cell(row, iEstPaid)),
+            revenue: val(row, iRev),
+            fees: val(row, iFees),
+            commission: val(row, iComm),
+            orderFee: val(row, iOrderFee),
+            growth: val(row, iGrowth),
+            ship: val(row, iShip) + val(row, iShipSub),
+            ads: val(row, iAds),
+            settled: paid ? val(row, iSettled) : 0,
+            pending: paid ? 0 : val(row, iEst),
+            reason: paid ? '' : cell(row, iReason),
+            type: cell(row, iType)
+          };
+          /* คีย์ประกอบจากค่าที่นิยามธุรกรรมนั้นจริงๆ — นำเข้าไฟล์เดิมซ้ำจะทับที่เดิม
+             แต่ขายกับคืนเงินของออเดอร์เดียวกันจะอยู่แยกแถวกัน */
+          rec.id = paid
+            ? oid + '|' + rec.paid + '|' + rec.revenue + '|' + rec.settled
+            : oid + '|pending';
+          const old = byId[rec.id];
+          if (old) updated++; else added++;
+          byId[rec.id] = rec;
+          /* พอเงินเข้าจริงแล้ว รายการค้างจ่ายของออเดอร์นั้นไม่ต้องเก็บไว้อีก */
+          if (paid && byId[oid + '|pending']) delete byId[oid + '|pending'];
+        }
+
+        const settle = Object.keys(byId).map(k => byId[k]);
+        if (!added && !updated) {
+          this.setState({ settleNote: 'ไม่พบรายการที่อ่านได้ในไฟล์นี้' });
+          return;
+        }
+        const feeSum = settle.filter(s => s.paid).reduce((a, s) => a + s.fees, 0);
+        this.set({ settle });
+        this.setState({
+          settleNote: (paid ? 'นำเข้ายอดที่ TikTok โอนแล้ว ' : 'นำเข้ายอดที่ยังไม่โอน ')
+            + (added ? 'เพิ่ม ' + added + ' ออเดอร์' : '')
+            + (added && updated ? ' · ' : '')
+            + (updated ? 'อัพเดท ' + updated + ' ออเดอร์' : '')
+            + ' · รวมในระบบ ' + settle.length + ' ออเดอร์ · ค่าธรรมเนียมสะสม ' + nf(Math.abs(Math.round(feeSum))) + ' ฿'
+        });
+      } catch (err) {
+        this.setState({ settleNote: 'อ่านไฟล์ไม่สำเร็จ: ' + (err && err.message ? err.message : 'ตรวจสอบรูปแบบไฟล์') });
       }
     };
     reader.readAsArrayBuffer(file);
@@ -2647,6 +2866,12 @@ class Component extends DCLogic {
     const rangeDays = rDates.length;
     const rList = st.sales.filter(s => rDates.indexOf(s.date) >= 0);
     const R = this.agg(rList, rDates);
+    /* สรุปเงินจริงจากรายงาน TikTok — ตั้งต้นที่เดือนล่าสุดที่มีเงินโอนเข้ามา */
+    const sMonths = this.settleMonths();
+    const sMonth = st.settleMonth && sMonths.indexOf(st.settleMonth) >= 0
+      ? st.settleMonth
+      : (sMonths[0] || today().slice(0, 7));
+    const S = this.settleSummary(sMonth);
     const d30 = this.dates(30);
     const list30 = st.sales.filter(s => d30.indexOf(s.date) >= 0);
 
@@ -3389,6 +3614,49 @@ class Component extends DCLogic {
       xferLabel: st.xferFrom + ' → ' + st.xferTo,
       transfer: this.transfer,
       walletOptions: WALLETS.map(w => ({ label: w, style: pill(st.newLedgerWallet === w), pick: () => this.setState({ newLedgerWallet: w }) })),
+      onIncomeExcel: this.onIncomeExcel,
+      settleNote: st.settleNote,
+      hasSettle: (st.settle || []).length > 0,
+      settleMonthLabel: thMonth(sMonth),
+      settleMonthTabs: sMonths.map(m => ({
+        label: thMonth(m), style: pill(m === sMonth), go: () => this.setState({ settleMonth: m })
+      })),
+      settleHead: S.orders
+        ? S.orders + ' ออเดอร์ที่ TikTok โอนเงินแล้วในเดือนนี้'
+          + (S.matched < S.orders ? ' · จับคู่กับยอดขายได้ ' + S.matched + ' (ที่เหลือยังไม่มีข้อมูลต้นทุน)' : '')
+        : 'ยังไม่มีออเดอร์ที่โอนเงินแล้วในเดือนนี้',
+      settleKpis: [
+        { label: 'ยอดขาย (ก่อนหัก)', value: nf(S.revenue) + ' ฿', sub: S.units ? S.units + ' ชิ้น' : '—', color: INK },
+        { label: 'TikTok หักไป', value: nf(Math.abs(S.fees)) + ' ฿', sub: nf1(S.feeRate) + '% ของยอดขาย', color: RED },
+        { label: 'เงินเข้าจริง', value: nf(S.received) + ' ฿', sub: 'หลังหักค่าธรรมเนียมแล้ว', color: INK },
+        { label: 'กำไรสุทธิ', value: nf(S.net) + ' ฿', sub: 'หักต้นทุน แพค โฆษณาแล้ว · มาร์จิ้น ' + nf1(S.margin) + '%', color: S.net >= 0 ? GREEN : RED }
+      ],
+      /* ค่าลบคือถูกหัก ค่าบวกคือได้คืน (เช่นค่าธรรมเนียมที่คืนมาตอนยกเลิกออเดอร์)
+         ต้องแสดงเครื่องหมายตามจริง ไม่งั้นรายการย่อยจะบวกแล้วไม่เท่ายอดรวม */
+      feeRows: [
+        { label: 'ค่าคอมมิชชั่น TikTok Shop', v: S.commission },
+        { label: 'ค่าธรรมเนียมคำสั่งซื้อ', v: S.orderFee },
+        { label: 'ค่าธรรมเนียมสนับสนุนการเติบโต', v: S.growth },
+        { label: 'ค่าส่งสุทธิ (หลังหักส่วนลดแพลตฟอร์ม)', v: S.ship },
+        { label: 'ค่าโฆษณา GMV Max', v: S.gmvAds },
+        { label: 'ค่าธรรมเนียมที่ได้คืน / อื่นๆ', v: S.other }
+      ].filter(r => Math.round(r.v) !== 0).map(r => ({
+        label: r.label,
+        value: (r.v > 0 ? '+' : '') + nf(Math.round(r.v)) + ' ฿',
+        color: r.v > 0 ? GREEN : '#B4675C'
+      })),
+      feeTotal: nf(Math.abs(Math.round(S.fees))) + ' ฿',
+      netRows: [
+        { label: 'เงินเข้าจริงจาก TikTok', value: nf(S.received) + ' ฿', color: INK },
+        { label: 'หัก ต้นทุนสินค้า', value: '−' + nf(S.cogs) + ' ฿', color: RED },
+        { label: 'หัก ค่าอุปกรณ์แพค', value: '−' + nf(S.pkg) + ' ฿', color: RED },
+        { label: 'หัก ค่าโฆษณาที่บันทึกเอง', value: '−' + nf(S.ad) + ' ฿', color: RED }
+      ],
+      netTotal: nf(S.net) + ' ฿',
+      netTotalColor: S.net >= 0 ? GREEN : RED,
+      pendingLabel: S.pendingCount
+        ? 'รอ TikTok โอนอีก ' + nf(S.pending) + ' ฿ จาก ' + S.pendingCount + ' ออเดอร์'
+        : '',
       walletCards: WALLETS.map(w => {
         const rows = st.ledger.filter(l => (l.wallet || WALLETS[0]) === w);
         const net = rows.reduce((a, l) => a + (l.type === 'income' ? l.amount : -l.amount), 0);

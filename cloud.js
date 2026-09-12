@@ -30,6 +30,7 @@
     pkg: { type: 'list', id: 'name' },
     orders: { type: 'list', id: 'id' },
     ledger: { type: 'list', id: 'id' },
+    settle: { type: 'list', id: 'id' },   /* ยอดที่ TikTok โอนจริงและค่าธรรมเนียมที่หัก แยกรายออเดอร์ */
     tasks: { type: 'list', id: 'id' },
     importedOrders: { type: 'set' },
     adSpend: { type: 'map' },
