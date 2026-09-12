@@ -2187,7 +2187,8 @@ class Component extends DCLogic {
       const n = this.state.products.length;
       const ok = window.confirm('แทนที่รายการสินค้าทั้งหมด ' + n + ' รายการ ด้วยรายการแยกสีจากไฟล์นี้?\n\n'
         + '• ต้นทุนที่เคยกรอกไว้จะถูกยกมาให้ทุกสีของสินค้าตัวเดียวกัน\n'
-        + '• สต็อกเดิมจะไปรวมอยู่ที่สีแรกของแต่ละตัว แล้วค่อยย้ายเอง\n'
+        + '• ถ้าไฟล์มีคอลัมน์จำนวนสต็อก จะใช้จำนวนรายสีจากไฟล์\n'
+        + '  ถ้าไม่มี สต็อกเดิมจะไปรวมที่สีแรกของแต่ละตัวให้ย้ายเอง\n'
         + '• ยอดขายที่บันทึกไปแล้วจะไม่ถูกแตะต้อง\n\n'
         + 'กด OK เพื่อดำเนินการต่อ');
       if (!ok) { this.setState({ itemsExcelNote: 'ยกเลิกแล้ว — ข้อมูลเดิมยังอยู่ครบ' }); return; }
@@ -2215,8 +2216,10 @@ class Component extends DCLogic {
         const headers = (ws[headerRow] || []).map(h => String(h || ''));
         const col = (re, dflt) => { const i = headers.findIndex(h => re.test(h)); return i >= 0 ? i : dflt; };
         const nameIdx = col(/name|ชื่อ|สินค้า|รายการ/i, 0);
-        const priceIdx = col(/price|ราคา|ขาย/i, 1);
-        const costIdx = col(/cost|ต้นทุน|ทุน|cogs/i, 2);
+        /* ห้าม default ไปคอลัมน์อื่น — ไฟล์ของ TikTok ไม่มีคอลัมน์ต้นทุน ถ้าชี้ไปคอลัมน์ชื่อสินค้า
+           num() จะดึงตัวเลขที่ปนอยู่ในชื่อ (เช่น ML02) ออกมาเป็นต้นทุน 0.12 แล้วทับของจริงทิ้ง */
+        const priceIdx = col(/price|ราคา|ขาย/i, -1);
+        const costIdx = col(/cost|ต้นทุน|ทุน|cogs/i, -1);
         const stockIdx = col(/stock|คงเหลือ|สต็อก|จำนวน|qty|quantity/i, -1);
         const catIdx = col(/cat|หมวด|ประเภท|category/i, -1);
         /* TikTok ตั้งชื่อคอลัมน์ว่า variation_value / sku_id — คำว่า variant กับ ^sku$ จับไม่ติด
@@ -2244,8 +2247,8 @@ class Component extends DCLogic {
           if (/^(ค่าเริ่มต้น|default)$/i.test(variant)) variant = '';
           parsed.push({
             i, name, variant,
-            price: num(row[priceIdx]),
-            cost: num(row[costIdx]),
+            price: priceIdx >= 0 ? num(row[priceIdx]) : 0,
+            cost: costIdx >= 0 ? num(row[costIdx]) : 0,
             cat: cell(row, catIdx),
             sku: cell(row, skuIdx),
             stock: stockIdx >= 0 ? Math.max(0, Math.round(num(row[stockIdx]))) : null
@@ -2256,23 +2259,30 @@ class Component extends DCLogic {
           /* โหมดแยกสี: สร้างรายการสินค้าใหม่ทั้งชุดจากไฟล์ หนึ่งบรรทัด = หนึ่งสี
              ยกต้นทุนเดิมมาให้ทุกสีของสินค้าตัวเดียวกัน (ไฟล์ TikTok ไม่มีคอลัมน์ต้นทุน)
              และยกสต็อกรวมเดิมไปไว้ที่สีแรก เพื่อไม่ให้ยอดรวมหาย แล้วให้ร้านค่อยย้ายเอง */
-          const oldByName = {};
-          this.state.products.forEach(p => { const k = key(p.name); if (!oldByName[k]) oldByName[k] = p; });
+          const oldBySku = {}, oldByName = {};
+          this.state.products.forEach(p => {
+            oldBySku[String(p.id)] = p;
+            const k = key(p.name); if (!oldByName[k]) oldByName[k] = p;
+          });
+          /* ถ้าเทมเพลตถูกดาวน์โหลดโดยติ๊ก "รวมคอลัมน์จำนวนสต็อก" มาด้วย ให้ใช้จำนวนรายสีจาก TikTok ตรงๆ
+             ถ้าไม่มีคอลัมน์นั้น จึงค่อยยกสต็อกรวมเดิมไปไว้ที่สีแรกเพื่อไม่ให้ยอดหาย */
+          const fileHasStock = stockIdx >= 0;
           const stockPlaced = {}, matchedOld = {};
           const built = [];
           parsed.forEach(r => {
             /* บรรทัดหัวตาราง/คำอธิบายในเทมเพลตก็มีข้อความในช่องชื่อเหมือนกัน
-               ใช้ราคาเป็นตัวแยก — สินค้าจริงต้องมีราคาขาย */
-            if (!(r.price > 0)) { skipped++; return; }
+               สินค้าจริงต้องมีรหัส SKU ของแพลตฟอร์ม หรืออย่างน้อยก็มีราคาขาย */
+            if (!/^\d{8,}$/.test(String(r.sku || '')) && !(r.price > 0)) { skipped++; return; }
             const k = key(r.name);
-            const old = oldByName[k];
-            const carry = old && !stockPlaced[k];
+            /* จับคู่ด้วย SKU ก่อน เพื่อให้ต้นทุนรายสีที่เคยกรอกไว้ไม่หายตอนนำเข้าซ้ำ */
+            const old = (r.sku && oldBySku[r.sku]) || oldByName[k];
+            const carry = !fileHasStock && old && !stockPlaced[k];
             if (old) { stockPlaced[k] = true; matchedOld[k] = true; }
             built.push({
               id: r.sku || ('x' + Date.now() + '_' + r.i),
               name: r.name, short: shortName(r.name), cat: r.cat, variant: r.variant,
               price: r.price, cost: old ? old.cost : r.cost,
-              stock: carry ? old.stock : 0
+              stock: fileHasStock ? r.stock : (carry ? old.stock : 0)
             });
           });
           if (!built.length) {
@@ -2288,7 +2298,10 @@ class Component extends DCLogic {
           this.set({ products, importReplace: false });
           this.setState({
             itemsExcelNote: 'แทนที่รายการสินค้าแล้ว · ' + built.length + ' รายการ จาก ' + names
-              + ' สินค้า (แยกสี ' + colours + ' รายการ) · ยกสต็อกเดิมไปไว้ที่สีแรกของแต่ละตัว โปรดตรวจและย้ายจำนวนให้ตรงแต่ละสี'
+              + ' สินค้า (แยกสี ' + colours + ' รายการ) · '
+              + (fileHasStock
+                  ? 'ใช้จำนวนสต็อกรายสีจากไฟล์ รวม ' + nf(built.reduce((a, p) => a + p.stock, 0)) + ' ชิ้น'
+                  : 'ยกสต็อกเดิมไปไว้ที่สีแรกของแต่ละตัว โปรดตรวจและย้ายจำนวนให้ตรงแต่ละสี')
               + (kept.length ? ' · เก็บสินค้าเดิมที่ไม่มีในไฟล์ไว้ ' + kept.length + ' รายการ (ลบเองได้ถ้าไม่ใช้แล้ว)' : '')
               + (skipped ? ' · ข้ามบรรทัดที่ไม่ใช่สินค้า ' + skipped + ' บรรทัด' : '')
           });
