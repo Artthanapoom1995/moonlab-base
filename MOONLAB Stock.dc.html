@@ -1176,6 +1176,10 @@ const IMG_BUDGET = 2500000;
 /* ระดับซูมตอนเปิดรูปเต็มจอ — 4x พอให้อ่านลายมือบนโน้ตที่ถ่ายมาทั้งหน้า A4 */
 const ZOOMS = [1, 2, 4];
 
+/* ร้านไลฟ์ 22.00–01.30 ยอดที่เข้ามาหลังเที่ยงคืนจึงเป็นของไลฟ์คืนก่อน ไม่ใช่ของวันใหม่
+   วันขายจึงเริ่มนับตอนตี 2 ไม่ใช่เที่ยงคืน — เผื่อเวลาหลังไลฟ์จบไว้ครึ่งชั่วโมง */
+const DAY_START = 2;
+
 const NAV = [
   { key: 'dash', label: 'ภาพรวม' },
   { key: 'entry', label: 'บันทึกขาย' },
@@ -2009,29 +2013,46 @@ class Component extends DCLogic {
         if (iSku < 0 || iQty < 0) throw new Error('ไฟล์นี้ไม่มีคอลัมน์ SKU ID หรือ Quantity');
 
         const cell = (r, i) => i >= 0 ? String(r[i] === undefined || r[i] === null ? '' : r[i]).trim() : '';
-        /* ไฟล์นี้เขียนวันที่แบบ 20/02/2026 21:55:06 — วัน/เดือน/ปี */
-        const toDate = s => {
-          const m = /^(\d{1,2})\/(\d{1,2})\/(\d{4})/.exec(String(s || '').trim());
-          if (!m) return this.xlsxDate(s);
-          return m[3] + '-' + ('0' + m[2]).slice(-2) + '-' + ('0' + m[1]).slice(-2);
+        /* ไฟล์นี้เขียนวันที่แบบ 20/02/2026 21:55:06 — วัน/เดือน/ปี แล้วตามด้วยเวลา
+           คืนทั้งวันที่ของรอบไลฟ์และเวลาจริง ออเดอร์ที่เข้ามาหลังเที่ยงคืนแต่ก่อน
+           DAY_START ยังนับเป็นยอดของไลฟ์คืนก่อน ไม่ใช่ของวันใหม่ */
+        const toStamp = s => {
+          const m = /^(\d{1,2})\/(\d{1,2})\/(\d{4})(?:[ ,]+(\d{1,2}):(\d{2}))?/.exec(String(s || '').trim());
+          if (!m) return { date: this.xlsxDate(s), t: '' };
+          let d = m[3] + '-' + ('0' + m[2]).slice(-2) + '-' + ('0' + m[1]).slice(-2);
+          const hh = m[4] === undefined ? null : parseInt(m[4], 10);
+          const t = hh === null ? '' : ('0' + hh).slice(-2) + ':' + m[5];
+          if (hh !== null && hh < DAY_START) d = addDays(d, -1);
+          return { date: d, t };
         };
 
         let products = this.state.products.slice();
         const bySku = {};
         products.forEach(p => { bySku[String(p.id)] = p; });
         const done = {};
-        (this.state.sales || []).forEach(s => { if (s.oid) done[s.oid + ':' + s.sku] = 1; });
+        (this.state.sales || []).forEach(s => { if (s.oid) done[s.oid + ':' + s.sku] = s; });
 
         const sales = [];
-        let cancelled = 0, dup = 0, created = 0, bad = 0;
+        const fixed = {};
+        let cancelled = 0, dup = 0, created = 0, bad = 0, shifted = 0, patched = 0;
         for (let i = hi + 1; i < ws.length; i++) {
           const row = ws[i] || [];
           const sku = cell(row, iSku), oid = cell(row, iOid);
-          const date = toDate(cell(row, iTime));
+          const stamp = toStamp(cell(row, iTime));
+          const date = stamp.date;
           if (!sku || !oid || !date) { bad++; continue; }
           const status = cell(row, iStatus);
           if (/ยกเลิก|cancel/i.test(status)) { cancelled++; continue; }
-          if (done[oid + ':' + sku]) { dup++; continue; }
+          if (stamp.t && parseInt(stamp.t, 10) < DAY_START) shifted++;
+          const old = done[oid + ':' + sku];
+          if (old) {
+            /* นำเข้าไฟล์เดิมซ้ำ — เติมเวลาให้รายการเก่าที่ยังไม่มี แล้วย้ายไปวันของรอบไลฟ์ให้ถูก */
+            if (stamp.t && (!old.t || old.date !== date)) {
+              fixed[old.id] = { t: stamp.t, date };
+              patched++;
+            }
+            dup++; continue;
+          }
           const qty = Math.max(1, Math.round(num(cell(row, iQty))) || 1);
           const net = num(cell(row, iNet));
           const unit = num(cell(row, iUnit));
@@ -2045,14 +2066,16 @@ class Component extends DCLogic {
             p = { id: sku, name: nm, short: shortName(nm), cat: cell(row, iCat), variant, price: unit, cost: 0, stock: 0 };
             products.push(p); bySku[sku] = p; created++;
           }
-          done[oid + ':' + sku] = 1;
-          sales.push({
+          const rec = {
             id: 'tt' + oid + '_' + sku, date, sku, qty, price,
             disc: 0, ship: 0, ch: 'TikTok Shop', fee: this.chFee('TikTok Shop'), oid
-          });
+          };
+          if (stamp.t) rec.t = stamp.t;
+          done[oid + ':' + sku] = rec;
+          sales.push(rec);
         }
 
-        if (!sales.length) {
+        if (!sales.length && !patched) {
           this.setState({ excelNote: 'ไม่มีรายการใหม่ให้บันทึก'
             + (dup ? ' · นำเข้าไปแล้ว ' + dup + ' รายการ' : '')
             + (cancelled ? ' · ข้ามรายการยกเลิก ' + cancelled : '') });
@@ -2061,10 +2084,16 @@ class Component extends DCLogic {
         const units = sales.reduce((a, s) => a + s.qty, 0);
         const gross = Math.round(sales.reduce((a, s) => a + s.qty * s.price, 0));
         const dates = sales.map(s => s.date).sort();
-        this.set({ sales: [...(this.state.sales || []), ...sales], products });
+        /* รายการเดิมที่เพิ่งได้เวลามา อาจต้องย้ายวันให้ตรงรอบไลฟ์ */
+        const merged = (this.state.sales || []).map(s => fixed[s.id] ? { ...s, ...fixed[s.id] } : s);
+        this.set({ sales: [...merged, ...sales], products });
         this.setState({
-          excelNote: 'บันทึกยอดขาย ' + sales.length + ' รายการ (' + units + ' ชิ้น · ' + nf(gross) + ' ฿) · '
-            + thDate(dates[0]) + ' – ' + thDate(dates[dates.length - 1])
+          excelNote: (sales.length
+              ? 'บันทึกยอดขาย ' + sales.length + ' รายการ (' + units + ' ชิ้น · ' + nf(gross) + ' ฿) · '
+                + thDate(dates[0]) + ' – ' + thDate(dates[dates.length - 1])
+              : 'ไม่มีรายการใหม่')
+            + (patched ? ' · เติมเวลาและจัดวันรอบไลฟ์ให้รายการเดิม ' + patched + ' รายการ' : '')
+            + (shifted ? ' · ยอดหลังเที่ยงคืนนับเป็นไลฟ์คืนก่อน ' + shifted + ' รายการ' : '')
             + (created ? ' · สร้างสินค้าที่เลิกขายแล้ว ' + created + ' รายการ (สต็อก 0)' : '')
             + (cancelled ? ' · ข้ามรายการยกเลิก ' + cancelled : '')
             + (dup ? ' · ข้ามที่ซ้ำ ' + dup : '')

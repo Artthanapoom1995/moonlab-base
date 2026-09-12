@@ -35,6 +35,7 @@ try {
         $ext = [System.IO.Path]::GetExtension($path).ToLower()
         $ctx.Response.ContentType = $(if ($types.ContainsKey($ext)) { $types[$ext] } else { 'application/octet-stream' })
         $ctx.Response.Headers.Add('Cache-Control','no-store')
+        $ctx.Response.Headers.Add('Access-Control-Allow-Origin','*')
         $ctx.Response.OutputStream.Write($bytes, 0, $bytes.Length)
       } else {
         $ctx.Response.StatusCode = 404
