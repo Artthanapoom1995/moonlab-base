@@ -2031,6 +2031,16 @@ class Component extends DCLogic {
         products.forEach(p => { bySku[String(p.id)] = p; });
         const done = {};
         (this.state.sales || []).forEach(s => { if (s.oid) done[s.oid + ':' + s.sku] = s; });
+        /* ยอดที่เคยนำเข้าด้วยตัวอ่านรุ่นเก่าเก็บ sku เป็นรหัสสินค้าในระบบ ไม่ใช่ SKU ของ TikTok
+           จึงจับคู่กับไฟล์ไม่ได้และจะกลายเป็นรายการซ้ำ ไฟล์คือต้นฉบับของออเดอร์นั้น
+           ถ้าเจอออเดอร์เดียวกันในไฟล์ ให้ลบของเก่าทิ้งแล้วใช้ของไฟล์แทนทั้งออเดอร์ */
+        const legacyByOid = {};
+        (this.state.sales || []).forEach(s => {
+          if (s.oid && !s.t && !String(s.id).startsWith('tt')) {
+            (legacyByOid[s.oid] = legacyByOid[s.oid] || []).push(s.id);
+          }
+        });
+        const drop = {};
 
         const sales = [];
         const fixed = {};
@@ -2044,6 +2054,7 @@ class Component extends DCLogic {
           const status = cell(row, iStatus);
           if (/ยกเลิก|cancel/i.test(status)) { cancelled++; continue; }
           if (stamp.t && parseInt(stamp.t, 10) < DAY_START) shifted++;
+          if (legacyByOid[oid]) { legacyByOid[oid].forEach(id => { drop[id] = 1; }); delete legacyByOid[oid]; }
           const old = done[oid + ':' + sku];
           if (old) {
             /* นำเข้าไฟล์เดิมซ้ำ — เติมเวลาให้รายการเก่าที่ยังไม่มี แล้วย้ายไปวันของรอบไลฟ์ให้ถูก */
@@ -2075,7 +2086,8 @@ class Component extends DCLogic {
           sales.push(rec);
         }
 
-        if (!sales.length && !patched) {
+        const dropped = Object.keys(drop).length;
+        if (!sales.length && !patched && !dropped) {
           this.setState({ excelNote: 'ไม่มีรายการใหม่ให้บันทึก'
             + (dup ? ' · นำเข้าไปแล้ว ' + dup + ' รายการ' : '')
             + (cancelled ? ' · ข้ามรายการยกเลิก ' + cancelled : '') });
@@ -2085,13 +2097,16 @@ class Component extends DCLogic {
         const gross = Math.round(sales.reduce((a, s) => a + s.qty * s.price, 0));
         const dates = sales.map(s => s.date).sort();
         /* รายการเดิมที่เพิ่งได้เวลามา อาจต้องย้ายวันให้ตรงรอบไลฟ์ */
-        const merged = (this.state.sales || []).map(s => fixed[s.id] ? { ...s, ...fixed[s.id] } : s);
+        const merged = (this.state.sales || [])
+          .filter(s => !drop[s.id])
+          .map(s => fixed[s.id] ? { ...s, ...fixed[s.id] } : s);
         this.set({ sales: [...merged, ...sales], products });
         this.setState({
           excelNote: (sales.length
               ? 'บันทึกยอดขาย ' + sales.length + ' รายการ (' + units + ' ชิ้น · ' + nf(gross) + ' ฿) · '
                 + thDate(dates[0]) + ' – ' + thDate(dates[dates.length - 1])
               : 'ไม่มีรายการใหม่')
+            + (dropped ? ' · แทนที่รายการเก่าที่นำเข้าด้วยตัวอ่านรุ่นก่อน ' + dropped + ' รายการ' : '')
             + (patched ? ' · เติมเวลาและจัดวันรอบไลฟ์ให้รายการเดิม ' + patched + ' รายการ' : '')
             + (shifted ? ' · ยอดหลังเที่ยงคืนนับเป็นไลฟ์คืนก่อน ' + shifted + ' รายการ' : '')
             + (created ? ' · สร้างสินค้าที่เลิกขายแล้ว ' + created + ' รายการ (สต็อก 0)' : '')
