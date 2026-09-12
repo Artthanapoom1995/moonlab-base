@@ -1,5 +1,7 @@
 # รหัสลับ — ห้ามขึ้น GitHub เด็ดขาด (repo นี้เป็น public)
 config.js
+# สร้างใหม่ทุกครั้งที่ build และมีทั้ง ANON_KEY, APP_PIN, SESSION_SECRET อยู่ข้างใน
+worker-config.js
 
 # ผลลัพธ์จากการ build (Cloudflare สร้างเองทุกครั้ง)
 public/
