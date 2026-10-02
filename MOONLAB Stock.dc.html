@@ -1202,6 +1202,23 @@ const trigScore = (a, b) => {
   return hit / ka.length;
 };
 
+/* TikTok ออกรหัส SKU ใหม่ทุกครั้งที่ลงสินค้าเดิมซ้ำ สินค้าหนึ่งตัวจึงมีได้หลายรหัส
+   รหัสหลักคือ id ส่วนรหัสอื่นของตัวเดียวกันเก็บไว้ใน skus — ถ้าดูแต่ id
+   ตัวนำเข้าจะสร้างสินค้าซ้ำขึ้นมาใหม่ทุกครั้งที่ TikTok เปลี่ยนรหัส */
+const skuIndex = products => {
+  const m = {};
+  products.forEach(p => { (p.skus || []).forEach(s => { m[String(s)] = p; }); });
+  products.forEach(p => { m[String(p.id)] = p; });
+  return m;
+};
+const withSku = (p, sku) => !sku || String(p.id) === sku || (p.skus || []).indexOf(sku) >= 0
+  ? p : { ...p, skus: [...(p.skus || []), sku] };
+/* ชื่อ+สีแบบตรงตัว ใช้บอกว่าเป็นสินค้าตัวเดียวกันแม้รหัสจะต่างกัน */
+const nvKey = (name, variant) => {
+  const v = String(variant || '').trim();
+  return normTh(name) + '|' + normTh(/^(ค่าเริ่มต้น|default)$/i.test(v) ? '' : v);
+};
+
 const iso = d => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
 const dayDiff = (a, b) => Math.round((new Date(a + 'T00:00:00') - new Date(b + 'T00:00:00')) / 86400000);
 const today = () => iso(new Date());
@@ -2027,24 +2044,39 @@ class Component extends DCLogic {
         };
 
         let products = this.state.products.slice();
-        const bySku = {};
-        products.forEach(p => { bySku[String(p.id)] = p; });
-        const done = {};
-        (this.state.sales || []).forEach(s => { if (s.oid) done[s.oid + ':' + s.sku] = s; });
+        const bySku = skuIndex(products);
+        /* รหัสที่ไม่รู้จักอาจเป็นสินค้าเดิมที่ TikTok ออกรหัสใหม่ให้ จึงลองชื่อ+สีตรงตัวก่อนสร้างใหม่
+           ถ้าชื่อ+สีซ้ำกันหลายตัว เลือกตัวที่มียอดขายผูกอยู่มากสุด */
+        const refs = {};
+        (this.state.sales || []).forEach(s => { refs[s.sku] = (refs[s.sku] || 0) + 1; });
+        const byName = {};
+        products.forEach(p => {
+          const k = nvKey(p.name, p.variant), q = byName[k];
+          if (!q || (refs[p.id] || 0) > (refs[q.id] || 0)) byName[k] = p;
+        });
         /* ยอดที่เคยนำเข้าด้วยตัวอ่านรุ่นเก่าเก็บ sku เป็นรหัสสินค้าในระบบ ไม่ใช่ SKU ของ TikTok
            จึงจับคู่กับไฟล์ไม่ได้และจะกลายเป็นรายการซ้ำ ไฟล์คือต้นฉบับของออเดอร์นั้น
-           ถ้าเจอออเดอร์เดียวกันในไฟล์ ให้ลบของเก่าทิ้งแล้วใช้ของไฟล์แทนทั้งออเดอร์ */
-        const legacyByOid = {};
+           ถ้าเจอออเดอร์เดียวกันในไฟล์ ให้ลบของเก่าทิ้งแล้วใช้ของไฟล์แทนทั้งออเดอร์
+           โดยคงค่าธรรมเนียมเดิมไว้ เพราะเป็นอัตราของช่วงเวลานั้น ไม่ใช่อัตราปัจจุบัน */
+        const isLegacy = s => s.oid && !s.t && !String(s.id).startsWith('tt');
+        const legacyByOid = {}, legacyFee = {};
         (this.state.sales || []).forEach(s => {
-          if (s.oid && !s.t && !String(s.id).startsWith('tt')) {
+          if (isLegacy(s)) {
             (legacyByOid[s.oid] = legacyByOid[s.oid] || []).push(s.id);
+            if (s.fee !== undefined) legacyFee[s.oid] = s.fee;
           }
+        });
+        /* กันซ้ำด้วยรหัสรายการ (เลขออเดอร์+SKU ของ TikTok) ซึ่งไม่เปลี่ยนแม้ยอดนั้นจะย้ายไปอยู่กับ
+           สินค้าอีกตัวตอนรวมสินค้าซ้ำ — ไม่นับรายการรุ่นเก่า เพราะกำลังจะถูกแทนที่ ถ้านับไว้ออเดอร์นั้นจะหายไปเลย */
+        const done = {};
+        (this.state.sales || []).forEach(s => {
+          if (s.oid && !isLegacy(s)) { done[s.id] = s; done[s.oid + ':' + s.sku] = s; }
         });
         const drop = {};
 
         const sales = [];
         const fixed = {};
-        let cancelled = 0, dup = 0, created = 0, bad = 0, shifted = 0, patched = 0;
+        let cancelled = 0, dup = 0, created = 0, linked = 0, bad = 0, shifted = 0, patched = 0;
         for (let i = hi + 1; i < ws.length; i++) {
           const row = ws[i] || [];
           const sku = cell(row, iSku), oid = cell(row, iOid);
@@ -2055,7 +2087,7 @@ class Component extends DCLogic {
           if (/ยกเลิก|cancel/i.test(status)) { cancelled++; continue; }
           if (stamp.t && parseInt(stamp.t, 10) < DAY_START) shifted++;
           if (legacyByOid[oid]) { legacyByOid[oid].forEach(id => { drop[id] = 1; }); delete legacyByOid[oid]; }
-          const old = done[oid + ':' + sku];
+          const old = done['tt' + oid + '_' + sku] || done[oid + ':' + sku];
           if (old) {
             /* นำเข้าไฟล์เดิมซ้ำ — เติมเวลาให้รายการเก่าที่ยังไม่มี แล้วย้ายไปวันของรอบไลฟ์ให้ถูก */
             if (stamp.t && (!old.t || old.date !== date)) {
@@ -2070,19 +2102,29 @@ class Component extends DCLogic {
           const price = net > 0 ? net / qty : unit;
           let p = bySku[sku];
           if (!p) {
-            /* สินค้าที่เลิกขายไปแล้วไม่มีในคลัง สร้างขึ้นมาให้ยอดขายครบ สต็อก 0 */
             const nm = cell(row, iName) || ('SKU ' + sku);
             let variant = cell(row, iVar);
             if (/^(ค่าเริ่มต้น|default)$/i.test(variant)) variant = '';
-            p = { id: sku, name: nm, short: shortName(nm), cat: cell(row, iCat), variant, price: unit, cost: 0, stock: 0 };
-            products.push(p); bySku[sku] = p; created++;
+            const k = nvKey(nm, variant), twin = byName[k];
+            if (twin) {
+              /* ตัวเดิมที่ TikTok ออกรหัสใหม่ — จำรหัสนี้ไว้กับตัวเดิม ต้นทุนกับสต็อกจะได้อยู่ที่เดียว */
+              p = withSku(twin, sku);
+              products = products.map(x => x === twin ? p : x);
+              linked++;
+            } else {
+              /* สินค้าที่เลิกขายไปแล้วไม่มีในคลัง สร้างขึ้นมาให้ยอดขายครบ สต็อก 0 */
+              p = { id: sku, name: nm, short: shortName(nm), cat: cell(row, iCat), variant, price: unit, cost: 0, stock: 0 };
+              products.push(p); created++;
+            }
+            bySku[sku] = p; byName[k] = p;
           }
           const rec = {
-            id: 'tt' + oid + '_' + sku, date, sku, qty, price,
-            disc: 0, ship: 0, ch: 'TikTok Shop', fee: this.chFee('TikTok Shop'), oid
+            id: 'tt' + oid + '_' + sku, date, sku: p.id, qty, price,
+            disc: 0, ship: 0, ch: 'TikTok Shop',
+            fee: legacyFee[oid] !== undefined ? legacyFee[oid] : this.chFee('TikTok Shop'), oid
           };
           if (stamp.t) rec.t = stamp.t;
-          done[oid + ':' + sku] = rec;
+          done[rec.id] = rec;
           sales.push(rec);
         }
 
@@ -2109,6 +2151,7 @@ class Component extends DCLogic {
             + (dropped ? ' · แทนที่รายการเก่าที่นำเข้าด้วยตัวอ่านรุ่นก่อน ' + dropped + ' รายการ' : '')
             + (patched ? ' · เติมเวลาและจัดวันรอบไลฟ์ให้รายการเดิม ' + patched + ' รายการ' : '')
             + (shifted ? ' · ยอดหลังเที่ยงคืนนับเป็นไลฟ์คืนก่อน ' + shifted + ' รายการ' : '')
+            + (linked ? ' · ผูกรหัส SKU ใหม่เข้ากับสินค้าเดิม ' + linked + ' รายการ' : '')
             + (created ? ' · สร้างสินค้าที่เลิกขายแล้ว ' + created + ' รายการ (สต็อก 0)' : '')
             + (cancelled ? ' · ข้ามรายการยกเลิก ' + cancelled : '')
             + (dup ? ' · ข้ามที่ซ้ำ ' + dup : '')
@@ -2303,31 +2346,43 @@ class Component extends DCLogic {
           /* โหมดแยกสี: สร้างรายการสินค้าใหม่ทั้งชุดจากไฟล์ หนึ่งบรรทัด = หนึ่งสี
              ยกต้นทุนเดิมมาให้ทุกสีของสินค้าตัวเดียวกัน (ไฟล์ TikTok ไม่มีคอลัมน์ต้นทุน)
              และยกสต็อกรวมเดิมไปไว้ที่สีแรก เพื่อไม่ให้ยอดรวมหาย แล้วให้ร้านค่อยย้ายเอง */
-          const oldBySku = {}, oldByName = {};
+          const oldBySku = skuIndex(this.state.products), oldByNv = {}, oldByName = {};
           this.state.products.forEach(p => {
-            oldBySku[String(p.id)] = p;
             const k = key(p.name); if (!oldByName[k]) oldByName[k] = p;
+            const kv = nvKey(p.name, p.variant); if (!oldByNv[kv]) oldByNv[kv] = p;
           });
+          const refs = {};
+          (this.state.sales || []).forEach(s => { refs[s.sku] = 1; });
           /* ถ้าเทมเพลตถูกดาวน์โหลดโดยติ๊ก "รวมคอลัมน์จำนวนสต็อก" มาด้วย ให้ใช้จำนวนรายสีจาก TikTok ตรงๆ
              ถ้าไม่มีคอลัมน์นั้น จึงค่อยยกสต็อกรวมเดิมไปไว้ที่สีแรกเพื่อไม่ให้ยอดหาย */
           const fileHasStock = stockIdx >= 0;
-          const stockPlaced = {}, matchedOld = {};
+          const stockPlaced = {}, matchedOld = {}, reused = {}, taken = {};
           const built = [];
           parsed.forEach(r => {
             /* บรรทัดหัวตาราง/คำอธิบายในเทมเพลตก็มีข้อความในช่องชื่อเหมือนกัน
                สินค้าจริงต้องมีรหัส SKU ของแพลตฟอร์ม หรืออย่างน้อยก็มีราคาขาย */
             if (!/^\d{8,}$/.test(String(r.sku || '')) && !(r.price > 0)) { skipped++; return; }
             const k = key(r.name);
-            /* จับคู่ด้วย SKU ก่อน เพื่อให้ต้นทุนรายสีที่เคยกรอกไว้ไม่หายตอนนำเข้าซ้ำ */
-            const old = (r.sku && oldBySku[r.sku]) || oldByName[k];
+            /* จับคู่ด้วย SKU (รวมรหัสเก่า) ก่อน แล้วชื่อ+สีตรงตัว เพื่อให้ต้นทุนรายสีที่เคยกรอกไว้ไม่หายตอนนำเข้าซ้ำ */
+            let same = (r.sku && oldBySku[r.sku]) || oldByNv[nvKey(r.name, r.variant)] || null;
+            if (same && reused[same.id]) same = null;
+            const old = same || oldByName[k];
             const carry = !fileHasStock && old && !stockPlaced[k];
             if (old) { stockPlaced[k] = true; matchedOld[k] = true; }
-            built.push({
-              id: r.sku || ('x' + Date.now() + '_' + r.i),
-              name: r.name, short: shortName(r.name), cat: r.cat, variant: r.variant,
+            /* ตัวเดียวกันใช้รหัสเดิมต่อ ยอดขายที่ผูกไว้กับรหัสนั้นจะได้ไม่หลุด */
+            let id = same ? same.id : r.sku;
+            if (!id || taken[id]) id = 'x' + Date.now() + '_' + r.i;
+            if (same) reused[same.id] = true;
+            taken[id] = true;
+            const p = {
+              id, name: r.name, short: shortName(r.name), cat: r.cat, variant: r.variant,
               price: r.price, cost: old ? old.cost : r.cost,
               stock: fileHasStock ? r.stock : (carry ? old.stock : 0)
-            });
+            };
+            if (same && same.skus) p.skus = same.skus.slice();
+            if (same && same.status) p.status = same.status;
+            if (same && same.gift) p.gift = same.gift;
+            built.push(/^\d{8,}$/.test(String(r.sku || '')) ? withSku(p, r.sku) : p);
           });
           if (!built.length) {
             this.setState({ itemsExcelNote: 'อ่านไฟล์ไม่พบรายการสินค้า — ยังไม่ได้แก้ไขข้อมูลเดิม (' + file.name + ')' });
@@ -2335,7 +2390,8 @@ class Component extends DCLogic {
           }
           /* สินค้าเดิมที่ไม่มีในไฟล์ ห้ามหายไปเฉยๆ เพราะสต็อกกับต้นทุนที่นับไว้จะสูญไปด้วย
              เก็บต่อท้ายไว้ให้ร้านตัดสินใจลบเอง */
-          const kept = this.state.products.filter(p => !matchedOld[key(p.name)]);
+          /* ตัวที่มียอดขายผูกอยู่ก็ต้องเก็บไว้ ไม่งั้นยอดขายเหล่านั้นจะหาสินค้า (และต้นทุน) ไม่เจอ */
+          const kept = this.state.products.filter(p => !reused[p.id] && (!matchedOld[key(p.name)] || refs[p.id]));
           const products = built.concat(kept);
           const colours = built.filter(p => p.variant).length;
           const names = Object.keys(built.reduce((a, p) => { a[key(p.name)] = 1; return a; }, {})).length;
@@ -2357,7 +2413,7 @@ class Component extends DCLogic {
           const i = r.i;
 
           /* จับคู่ด้วยรหัสสินค้าก่อน แล้วค่อยชื่อ+ตัวเลือกแบบตรงตัว สุดท้ายจึงเดาจากชื่อบางส่วน */
-          let match = sku ? products.find(p => String(p.id) === sku) : null;
+          let match = sku ? products.find(p => String(p.id) === sku || (p.skus || []).indexOf(sku) >= 0) : null;
           if (!match) match = products.find(p => key(p.name) === key(name) && key(p.variant) === key(variant));
           if (!match && !variant) match = products.find(p => key(p.name) === key(name));
           if (!match) {
