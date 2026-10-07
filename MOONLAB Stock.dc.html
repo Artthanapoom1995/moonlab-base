@@ -3046,6 +3046,7 @@ class Component extends DCLogic {
 
     const TH_M = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
     const monthly = st.range === 365;
+    /* กราฟชื่อ "ยอดขาย" จึงต้องพล็อตยอดขายหลังหักส่วนลด — เดิมพล็อตกำไรสุทธิ ตัวเลขบนกราฟเลยไม่ตรงกับยอดขายจริง */
     let series;
     if (monthly) {
       const now = new Date();
@@ -3056,10 +3057,10 @@ class Component extends DCLogic {
         const lines = st.sales.filter(s => s.date.slice(0, 7) === key);
         const adKeys = Object.keys(st.adSpend).filter(d => d.slice(0, 7) === key);
         const a = this.agg(lines, adKeys);
-        series.push({ label: TH_M[dt.getMonth()] + ' ' + String(dt.getFullYear() + 543).slice(2), val: a.net, agg: a });
+        series.push({ label: TH_M[dt.getMonth()] + ' ' + String(dt.getFullYear() + 543).slice(2), val: a.revenue, agg: a });
       }
     } else {
-      series = rDates.map(d => ({ label: thDate(d), val: this.agg(this.daySales(d), [d]).net }));
+      series = rDates.map(d => ({ label: thDate(d), val: this.agg(this.daySales(d), [d]).revenue }));
     }
     const barVals = series.map(s => s.val);
     const barMax = Math.max(1, ...barVals.map(v => Math.abs(v)));
