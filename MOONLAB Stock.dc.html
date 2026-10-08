@@ -1716,6 +1716,12 @@ class Component extends DCLogic {
 
   byId(id) { return this.state.products.find(p => p.id === id); }
   rules() { return this.state.rules || RULES; }
+  /* หมวดที่ร้านใช้จริง: หมวดในสูตรแพค (รวมที่เพิ่มเอง) ตามด้วยหมวดที่มีสินค้าแต่ยังไม่มีสูตร */
+  shopCats() {
+    const out = Object.keys(this.rules());
+    this.state.products.forEach(p => { if (p.cat && out.indexOf(p.cat) < 0) out.push(p.cat); });
+    return out;
+  }
   /* หมวดที่ยังไม่มีสูตร = ไม่ตัดอุปกรณ์ ตรงกับที่เห็นบนหน้าจอ
      (เดิมมีสูตรลับซ่อนไว้ อ้างถึงอุปกรณ์ที่ร้านอาจลบทิ้งแล้ว ถ้าวันหลังสร้างชื่อซ้ำจะโดนตัดขึ้นมาเอง) */
   rule(cat) { return this.rules()[cat] || {}; }
@@ -3013,7 +3019,7 @@ class Component extends DCLogic {
     const cFee = cGross * chFee / 100;
     const cNet = cGross - cCost - cFee - cPkg - num(st.ship);
 
-    const cats = ['ทั้งหมด', ...Object.keys(RULES).filter(c => P.some(p => p.cat === c))];
+    const cats = ['ทั้งหมด', ...this.shopCats().filter(c => P.some(p => p.cat === c))];
     const filtered = P.filter(p =>
       (st.cat === 'ทั้งหมด' || p.cat === st.cat) &&
       (st.statusFilter === 'ทั้งหมด' || productStatus(p) === st.statusFilter) &&
@@ -3459,7 +3465,7 @@ class Component extends DCLogic {
       isEditCat: st.editingField === 'cat',
       editingValue: st.editingValue,
       onEditingValue: e => this.setState({ editingValue: e.target.value }),
-      catOptions: Object.keys(RULES).map(c => ({ label: c, style: pill(st.editingValue === c), pick: () => this.setState({ editingValue: c }) })),
+      catOptions: this.shopCats().map(c => ({ label: c, style: pill(st.editingValue === c), pick: () => this.setState({ editingValue: c }) })),
 
       saveEdit: this.saveEdit,
       cancelEdit: this.cancelEdit,
