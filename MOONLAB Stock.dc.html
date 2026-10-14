@@ -932,11 +932,11 @@
             <button onClick="{{ m.go }}" style="{{ m.style }}">{{ m.label }}</button>
           </sc-for>
         </div>
-        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px;margin-bottom:12px">
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px;margin-bottom:12px;align-items:start">
           <sc-for list="{{ walletCards }}" as="w" hint-placeholder-count="3">
             <div style="background:#FFFDFA;border:1px solid #EBE7DF;border-radius:16px;padding:20px 22px">
               <div style="font-size:12.5px;font-weight:500;color:#6E6860">{{ w.name }}</div>
-              <div style="font-size:10.5px;font-weight:300;color:#A19A8E;margin-top:3px">{{ w.count }}</div>
+              <button onClick="{{ w.toggle }}" style="margin-top:6px;border:1px solid #E0DBD2;background:#FDFCF9;border-radius:999px;padding:5px 12px;font-size:11px;font-weight:400;color:#6E6860;cursor:pointer;font-family:'Prompt',sans-serif" style-hover="border-color:#1B1A18">{{ w.count }} {{ w.caret }}</button>
               <div style="font-size:26px;font-weight:600;letter-spacing:-0.02em;margin-top:12px;color:{{ w.balColor }}">{{ w.balance }}</div>
               <div style="font-size:10.5px;font-weight:300;color:#A19A8E;margin-top:2px">{{ w.caption }}</div>
               <div style="display:flex;flex-wrap:wrap;gap:4px 14px;margin-top:10px;font-size:11px;font-weight:300">
@@ -944,6 +944,20 @@
                 <span style="color:#B4675C">จ่าย {{ w.expense }}</span>
                 <span style="color:#8C867C">{{ w.xfer }}</span>
               </div>
+              <sc-if value="{{ w.open }}">
+                <div style="margin-top:14px;border-top:1px solid #EFEBE3">
+                  <sc-if value="{{ w.noRows }}">
+                    <div style="padding:12px 0 2px;font-size:11.5px;font-weight:300;color:#A19A8E">ไม่มีรายการ</div>
+                  </sc-if>
+                  <sc-for list="{{ w.rows }}" as="r" hint-placeholder-count="3">
+                    <div style="display:flex;align-items:baseline;gap:10px;padding:9px 0;border-bottom:1px solid #F5F2EC">
+                      <span style="flex:none;font-size:12px;font-weight:400;color:#6E6860;white-space:nowrap">{{ r.date }}</span>
+                      <span style="flex:1;min-width:0;font-size:11px;font-weight:300;color:#A19A8E;overflow-wrap:anywhere">{{ r.note }}</span>
+                      <span style="flex:none;font-size:12.5px;font-weight:500;white-space:nowrap;color:{{ r.color }}">{{ r.amount }}</span>
+                    </div>
+                  </sc-for>
+                </div>
+              </sc-if>
             </div>
           </sc-for>
         </div>
@@ -1302,6 +1316,7 @@ class Component extends DCLogic {
     settle: [], settleNote: '', settleMonth: '',
     xferFrom: WALLETS[0], xferTo: WALLETS[1], xferAmount: '',
     walletMonth: '',   /* เดือนที่ดูในการ์ดกระเป๋า 'YYYY-MM' — ว่าง = ยอดสะสมทั้งหมด */
+    walletOpen: {},    /* กระเป๋าที่กางรายการออกดูอยู่ ชื่อกระเป๋า → true */
     locked: true, pin: "", pinErr: "", pinBusy: false, authChecked: false,
     sync: { state: 'local', msg: '' }, who: '',
     fees: {},  /* ค่าคอมฯ ที่ร้านตั้งเอง แยกตามช่องทาง — ว่าง = ใช้ค่าตั้งต้นใน CHANNELS */
@@ -3804,8 +3819,19 @@ class Component extends DCLogic {
         const moved = rows.filter(l => l.xfer).reduce((a, l) => a + signed(l), 0);
         const endBal = mine.filter(l => l.date.slice(0, 7) <= wMonth).reduce((a, l) => a + signed(l), 0);
         const money = v => (v < 0 ? '−' : '') + nf(Math.abs(v)) + ' ฿';
+        const open = !!(st.walletOpen || {})[w];
         return {
           name: w, count: rows.length + ' รายการ',
+          caret: open ? '▴' : '▾',
+          toggle: () => this.setState(s => ({ walletOpen: { ...(s.walletOpen || {}), [w]: !(s.walletOpen || {})[w] } })),
+          open, noRows: open && !rows.length,
+          /* ใหม่สุดก่อน — บัญชีถูกเพิ่มต่อท้ายตามลำดับเวลา กลับลำดับก่อนแล้วเรียงตามวัน รายการวันเดียวกันจึงยังเรียงถูก */
+          rows: open ? rows.slice().reverse().sort((a, b) => a.date < b.date ? 1 : a.date > b.date ? -1 : 0).map(l => ({
+            date: thDate(l.date),
+            note: l.note || (l.type === 'income' ? 'รายรับ' : 'รายจ่าย'),
+            amount: (l.type === 'income' ? '+' : '−') + nf(l.amount) + ' ฿',
+            color: l.type === 'income' ? GREEN : RED
+          })) : [],
           income: nf(inc) + ' ฿', expense: nf(exp) + ' ฿',
           xfer: Math.round(moved) ? 'โอน ' + (moved > 0 ? '+' : '') + money(moved) : '',
           balance: (wMonth && net > 0 ? '+' : '') + money(net),
