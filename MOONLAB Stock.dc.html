@@ -926,15 +926,23 @@
           </sc-if>
         </div>
 
+        <div style="display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin-bottom:12px">
+          <div style="font-size:13.5px;font-weight:500;flex:none">ยอดแต่ละกระเป๋า</div>
+          <sc-for list="{{ walletMonthTabs }}" as="m" hint-placeholder-count="3">
+            <button onClick="{{ m.go }}" style="{{ m.style }}">{{ m.label }}</button>
+          </sc-for>
+        </div>
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px;margin-bottom:12px">
           <sc-for list="{{ walletCards }}" as="w" hint-placeholder-count="3">
             <div style="background:#FFFDFA;border:1px solid #EBE7DF;border-radius:16px;padding:20px 22px">
               <div style="font-size:12.5px;font-weight:500;color:#6E6860">{{ w.name }}</div>
               <div style="font-size:10.5px;font-weight:300;color:#A19A8E;margin-top:3px">{{ w.count }}</div>
               <div style="font-size:26px;font-weight:600;letter-spacing:-0.02em;margin-top:12px;color:{{ w.balColor }}">{{ w.balance }}</div>
-              <div style="display:flex;gap:14px;margin-top:10px;font-size:11px;font-weight:300">
+              <div style="font-size:10.5px;font-weight:300;color:#A19A8E;margin-top:2px">{{ w.caption }}</div>
+              <div style="display:flex;flex-wrap:wrap;gap:4px 14px;margin-top:10px;font-size:11px;font-weight:300">
                 <span style="color:#6F8763">รับ {{ w.income }}</span>
                 <span style="color:#B4675C">จ่าย {{ w.expense }}</span>
+                <span style="color:#8C867C">{{ w.xfer }}</span>
               </div>
             </div>
           </sc-for>
@@ -1293,6 +1301,7 @@ class Component extends DCLogic {
     ledger: [], newLedgerDate: today(), newLedgerType: 'income', newLedgerAmount: '', newLedgerNote: '', newLedgerWallet: WALLETS[0],
     settle: [], settleNote: '', settleMonth: '',
     xferFrom: WALLETS[0], xferTo: WALLETS[1], xferAmount: '',
+    walletMonth: '',   /* เดือนที่ดูในการ์ดกระเป๋า 'YYYY-MM' — ว่าง = ยอดสะสมทั้งหมด */
     locked: true, pin: "", pinErr: "", pinBusy: false, authChecked: false,
     sync: { state: 'local', msg: '' }, who: '',
     fees: {},  /* ค่าคอมฯ ที่ร้านตั้งเอง แยกตามช่องทาง — ว่าง = ใช้ค่าตั้งต้นใน CHANNELS */
@@ -3044,6 +3053,9 @@ class Component extends DCLogic {
       return { p, rate, order, capital: order * p.cost, cover: rate > 0 ? p.stock / rate : 999, roi: p.cost > 0 ? unitProfit / p.cost : 0, sold: sold30[p.id] || 0 };
     }).filter(x => x.order > 0 || x.sold > 0)
       .sort((a, b) => (b.roi * b.rate) - (a.roi * a.rate));
+    /* เดือนที่มีรายการบัญชี ใหม่สุดก่อน — ถ้าเดือนที่เลือกไว้ไม่มีรายการเหลือแล้ว กลับไปดูยอดสะสม */
+    const walletKeys = [...new Set(st.ledger.map(l => l.date.slice(0, 7)))].sort().reverse();
+    const wMonth = walletKeys.includes(st.walletMonth) ? st.walletMonth : '';
     const budget = num(st.budget);
     let spent = 0;
     plan.forEach(x => { x.fits = spent + x.capital <= budget; if (x.fits) spent += x.capital; });
@@ -3777,16 +3789,27 @@ class Component extends DCLogic {
       pendingLabel: S.pendingCount
         ? 'รอ TikTok โอนอีก ' + nf(S.pending) + ' ฿ จาก ' + S.pendingCount + ' ออเดอร์'
         : '',
+      walletMonthTabs: [{ k: '', label: 'ทั้งหมด' }].concat(walletKeys.map(k => ({ k, label: thMonth(k) })))
+        .map(o => ({ label: o.label, style: pill(wMonth === o.k), go: () => this.setState({ walletMonth: o.k }) })),
+      /* ทั้งหมด = ยอดคงเหลือสะสม · เลือกเดือน = ยอดที่เปลี่ยนในเดือนนั้น พร้อมยอดคงเหลือ ณ สิ้นเดือน
+         ยอดโอนระหว่างกระเป๋าไม่นับเป็นรับ/จ่าย แต่แสดงแยกไว้ ตัวเลขในการ์ดจะได้บวกลบกันลงตัว */
       walletCards: WALLETS.map(w => {
-        const rows = st.ledger.filter(l => (l.wallet || WALLETS[0]) === w);
-        const net = rows.reduce((a, l) => a + (l.type === 'income' ? l.amount : -l.amount), 0);
+        const signed = l => l.type === 'income' ? l.amount : -l.amount;
+        const mine = st.ledger.filter(l => (l.wallet || WALLETS[0]) === w);
+        const rows = wMonth ? mine.filter(l => l.date.slice(0, 7) === wMonth) : mine;
+        const net = rows.reduce((a, l) => a + signed(l), 0);
         const real = rows.filter(l => !l.xfer);
         const inc = real.filter(l => l.type === 'income').reduce((a, l) => a + l.amount, 0);
         const exp = real.filter(l => l.type === 'expense').reduce((a, l) => a + l.amount, 0);
+        const moved = rows.filter(l => l.xfer).reduce((a, l) => a + signed(l), 0);
+        const endBal = mine.filter(l => l.date.slice(0, 7) <= wMonth).reduce((a, l) => a + signed(l), 0);
+        const money = v => (v < 0 ? '−' : '') + nf(Math.abs(v)) + ' ฿';
         return {
           name: w, count: rows.length + ' รายการ',
           income: nf(inc) + ' ฿', expense: nf(exp) + ' ฿',
-          balance: (net >= 0 ? '' : '−') + nf(Math.abs(net)) + ' ฿',
+          xfer: Math.round(moved) ? 'โอน ' + (moved > 0 ? '+' : '') + money(moved) : '',
+          balance: (wMonth && net > 0 ? '+' : '') + money(net),
+          caption: wMonth ? 'ยอดเดือน ' + thMonth(wMonth) + ' · คงเหลือสิ้นเดือน ' + money(endBal) : 'ยอดคงเหลือ',
           balColor: net >= 0 ? GREEN : RED
         };
       }),
