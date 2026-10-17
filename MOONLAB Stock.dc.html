@@ -177,6 +177,40 @@
             </div>
             <div style="grid-row:3;grid-column:3;text-align:center;font-size:11px;font-weight:500;color:#6E6860;padding-top:8px">{{ chartAxisLabel }}</div>
           </div>
+
+          <div style="font-size:13.5px;font-weight:500;margin:24px 0 14px">{{ unitTitle }}</div>
+          <div style="background:#FDFCF9;border:1px solid #EBE7DF;border-radius:14px;padding:22px 24px 16px;margin-top:8px;display:grid;grid-template-columns:18px 62px 1fr;gap:0 8px">
+            <div style="grid-row:1;display:flex;align-items:center;justify-content:center">
+              <span style="font-size:11px;font-weight:500;color:#6E6860;writing-mode:vertical-rl;transform:rotate(180deg);white-space:nowrap">จำนวน (ชิ้น)</span>
+            </div>
+            <div style="grid-row:1;display:flex;flex-direction:column;justify-content:space-between;height:250px;align-items:flex-end">
+              <sc-for list="{{ unitTicks }}" as="t" hint-placeholder-count="6">
+                <span style="font-size:11px;font-weight:300;color:#9A9388;line-height:1;transform:translateY(-50%)">{{ t.label }}</span>
+              </sc-for>
+            </div>
+            <div style="grid-row:1;position:relative;height:250px;border-left:1.5px solid #C9C3B8;border-bottom:1.5px solid #C9C3B8">
+              <div style="position:absolute;inset:0;display:flex;flex-direction:column;justify-content:space-between">
+                <sc-for list="{{ unitTicks }}" as="t" hint-placeholder-count="6">
+                  <div style="border-top:1px solid #F0ECE4;height:0"></div>
+                </sc-for>
+              </div>
+              <svg style="position:absolute;inset:0;width:100%;height:100%;overflow:visible" viewBox="0 0 100 100" preserveAspectRatio="none">
+                <polyline points="{{ unitPoints }}" fill="none" stroke="#3F6480" stroke-width="0.6" vector-effect="non-scaling-stroke" style="stroke-width:2.5px" />
+              </svg>
+              <sc-for list="{{ unitDots }}" as="dot" hint-placeholder-count="7">
+                <div style="{{ dot.style }}"></div>
+              </sc-for>
+              <sc-for list="{{ unitPeaks }}" as="p" hint-placeholder-count="3">
+                <div style="{{ p.style }}">{{ p.label }}</div>
+              </sc-for>
+            </div>
+            <div style="grid-row:2;grid-column:3;position:relative;height:16px;margin-top:8px">
+              <sc-for list="{{ chartLabels }}" as="lbl" hint-placeholder-count="7">
+                <span style="{{ lbl.style }}">{{ lbl.text }}</span>
+              </sc-for>
+            </div>
+            <div style="grid-row:3;grid-column:3;text-align:center;font-size:11px;font-weight:500;color:#6E6860;padding-top:8px">{{ chartAxisLabel }}</div>
+          </div>
         </div>
 
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:12px">
@@ -3093,10 +3127,44 @@ class Component extends DCLogic {
         series.push({ label: TH_M[dt.getMonth()] + ' ' + String(dt.getFullYear() + 543).slice(2), val: a.revenue, agg: a });
       }
     } else {
-      series = rDates.map(d => ({ label: thDate(d), val: this.agg(this.daySales(d), [d]).revenue }));
+      series = rDates.map(d => { const a = this.agg(this.daySales(d), [d]); return { label: thDate(d), val: a.revenue, agg: a }; });
     }
     const barVals = series.map(s => s.val);
     const barMax = Math.max(1, ...barVals.map(v => Math.abs(v)));
+    /* กราฟเส้นแบบเดียวกันใช้ทั้งยอดเงินและจำนวนชิ้น — แต่ละกราฟมีแกน y ของตัวเอง
+       ไม่เอาสองหน่วยมาซ้อนในกราฟเดียว เพราะสเกลต่างกันมากจนอ่านผิดได้ */
+    const lineChart = (vals, unit, max) => {
+      const x = i => (i / (vals.length - 1 || 1)) * 100;
+      const h = v => Math.max(0, v / max) * 92;
+      return {
+        points: vals.map((v, i) => (Math.round(x(i) * 100) / 100) + ',' + (Math.round((100 - h(v)) * 100) / 100)).join(' '),
+        dots: vals.map((v, i) => ({
+          style: {
+            position: 'absolute', left: x(i) + '%', bottom: h(v) + '%',
+            width: 8, height: 8, borderRadius: '50%', background: '#3F6480',
+            transform: 'translate(-50%, 50%)'
+          }
+        })),
+        /* โชว์ตัวเลขธรรมดาที่ทุกจุดที่มียอดขาย (ตัดจุด 0 ทิ้งกันข้อความรก) */
+        peaks: vals.map((v, i) => i).filter(i => vals[i] > 0).map(i => ({
+          label: nf(vals[i]) + unit,
+          style: {
+            position: 'absolute', left: x(i) + '%', bottom: 'calc(' + h(vals[i]) + '% + 14px)',
+            transform: 'translateX(-50%)', color: '#6E6860', fontSize: 10.5, fontWeight: 500,
+            whiteSpace: 'nowrap', pointerEvents: 'none'
+          }
+        })),
+        ticks: [5, 4, 3, 2, 1, 0].map(i => ({ label: nf(max * i / 5) }))
+      };
+    };
+    const salesChart = lineChart(barVals, ' ฿', barMax);
+    /* เพดานแกนจำนวนชิ้น = 5 ช่อง ช่องละเลขกลมๆ (4, 8, 80 …) เส้นตารางจะได้ตกที่จำนวนเต็มอ่านง่าย */
+    const unitVals = series.map(s => s.agg.units);
+    const unitStep = (() => {
+      const raw = Math.max(1, ...unitVals) / 5, mag = Math.pow(10, Math.floor(Math.log10(raw)));
+      return Math.max(1, Math.ceil(raw / mag) * mag);
+    })();
+    const unitChart = lineChart(unitVals, ' ชิ้น', unitStep * 5);
 
     return {
       headNote: st.loaded ? P.length + ' SKU · ' + st.sales.length + ' รายการขาย' : 'กำลังโหลดข้อมูลสินค้า',
@@ -3229,38 +3297,15 @@ class Component extends DCLogic {
       ],
       chartTitle: monthly ? 'ยอดขายรายเดือน' : 'ยอดขายรายวัน',
       chartAxisLabel: monthly ? 'เดือน' : 'วันที่',
-      chartPoints: series.map((s, i) => {
-        const x = (i / (series.length - 1 || 1)) * 100;
-        const y = 100 - Math.max(0, barVals[i] / barMax) * 92;
-        return (Math.round(x * 100) / 100) + ',' + (Math.round(y * 100) / 100);
-      }).join(' '),
-      chartDots: series.map((s, i) => ({
-        style: {
-          position: 'absolute',
-          left: (i / (series.length - 1 || 1)) * 100 + '%',
-          bottom: Math.max(0, barVals[i] / barMax) * 92 + '%',
-          width: 8, height: 8, borderRadius: '50%', background: '#3F6480',
-          transform: 'translate(-50%, 50%)'
-        }
-      })),
-      /* โชว์ยอดเงินตัวเลขธรรมดาที่ทุกจุดที่มียอดขาย (ตัดจุด 0 ฿ ทิ้งกันข้อความรก)
-         เดิมไฮไลต์แค่ 3 อันดับแรกด้วยป้ายสี ตอนนี้ตัดเรื่องจัดอันดับออก โชว์ทุกจุดเท่ากันหมด */
-      chartPeaks: series.map((s, i) => i).filter(i => barVals[i] > 0).map(i => ({
-        label: nf(barVals[i]) + ' ฿',
-        style: {
-          position: 'absolute',
-          left: (i / (series.length - 1 || 1)) * 100 + '%',
-          bottom: 'calc(' + Math.max(0, barVals[i] / barMax) * 92 + '% + 14px)',
-          transform: 'translateX(-50%)',
-          color: '#6E6860', fontSize: 10.5, fontWeight: 500,
-          whiteSpace: 'nowrap', pointerEvents: 'none'
-        }
-      })),
-      yTicks: (() => {
-        const steps = 5, out = [];
-        for (let i = steps; i >= 0; i--) out.push({ label: nf(barMax * i / steps) });
-        return out;
-      })(),
+      chartPoints: salesChart.points,
+      chartDots: salesChart.dots,
+      chartPeaks: salesChart.peaks,
+      yTicks: salesChart.ticks,
+      unitTitle: monthly ? 'จำนวนที่ขายได้รายเดือน' : 'จำนวนที่ขายได้รายวัน',
+      unitPoints: unitChart.points,
+      unitDots: unitChart.dots,
+      unitPeaks: unitChart.peaks,
+      unitTicks: unitChart.ticks,
       chartLabels: (() => {
         const n = series.length, last = n - 1;
         const every = Math.max(1, Math.ceil(n / 8));
