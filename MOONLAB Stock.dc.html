@@ -1663,6 +1663,11 @@ class Component extends DCLogic {
       const remote = await cloud.load();
       if (remote) { this.applySaved(remote); return; }        /* คลาวด์เคยถูกใช้แล้ว แม้จะว่างเปล่าก็ถือว่าเริ่มต้นแล้ว */
       if (hadLocal) { cloud.seed(this.snapshot()); return; }   /* คลาวด์ยังว่าง → อัปของเครื่องนี้ขึ้นไปตั้งต้น */
+      /* ดึงไม่สำเร็จ (ยังไม่ได้ใส่รหัส หรือเน็ตหลุด) ไม่ใช่ "คลาวด์ว่าง" — ห้ามสร้างข้อมูลตัวอย่าง
+         เครื่องใหม่ที่เปิดมาเจอหน้าใส่รหัสเคยสร้างข้อมูลตัวอย่างแล้วต่อคิวส่งไว้ พอใส่รหัสผ่าน
+         คิวนั้นก็ถูกส่งขึ้นไปทับสินค้า ยอดขาย แพคเกจ และค่าโฆษณาจริงทั้งร้าน (เกิดจริง ต.ค. 69)
+         รอ boot() รอบหลังปลดล็อกดึงของจริงมาแทน */
+      if (cloud.status().state !== 'ok') return;
     }
     if (hadLocal) return;
 
@@ -1737,7 +1742,11 @@ class Component extends DCLogic {
       rules: saved.rules || RULES, importedOrders: saved.importedOrders || [],
       tasks: saved.tasks || [], orders: saved.orders || [], ledger: saved.ledger || [],
       fees: saved.fees || {}, images: saved.images || {}, settle: saved.settle || [], loaded: true
-    }, () => { if (shift > 0) this.persist(); });
+    }, () => {
+      /* เลื่อนวันของข้อมูลตัวอย่างเก็บไว้แค่ในเครื่อง — ห้ามส่งขึ้นคลาวด์ ไม่งั้น cache ตัวอย่างเก่า
+         ในเครื่องใดเครื่องหนึ่งจะกลับไปทับข้อมูลจริงได้ */
+      if (shift > 0 && window.MoonlabCloud) window.MoonlabCloud.cache(this.snapshot());
+    });
   }
 
   /* อีกเครื่องแก้ข้อมูล — รับเฉพาะ key ที่เปลี่ยน ไม่ต้องโหลดใหม่ทั้งหน้า */
