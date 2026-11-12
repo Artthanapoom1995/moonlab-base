@@ -1018,8 +1018,12 @@
                 </sc-for>
               </div>
             </div>
-            <div style="display:flex;gap:8px;align-items:flex-end">
-              <div style="flex:1;min-width:0">
+            <div style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap">
+              <div style="flex:none">
+                <div style="font-size:11.5px;font-weight:400;color:#9A9388;margin-bottom:8px">วันที่โอน</div>
+                <input type="date" value="{{ xferDate }}" onChange="{{ onXferDate }}" style="border:1px solid #E0DBD2;background:#FDFCF9;border-radius:10px;padding:12px 13px;font-size:14px" />
+              </div>
+              <div style="flex:1;min-width:110px">
                 <div style="font-size:11.5px;font-weight:400;color:#9A9388;margin-bottom:8px">จำนวนที่โอน</div>
                 <input value="{{ xferAmount }}" onChange="{{ onXferAmount }}" inputmode="numeric" placeholder="0" style="width:100%;border:1px solid #E0DBD2;background:#FDFCF9;border-radius:10px;padding:13px 13px;font-size:14px;text-align:right" />
               </div>
@@ -1348,7 +1352,7 @@ class Component extends DCLogic {
     planShowCats: Object.keys(RULES).reduce((a, c) => ({ ...a, [c]: true }), {}),
     ledger: [], newLedgerDate: today(), newLedgerType: 'income', newLedgerAmount: '', newLedgerNote: '', newLedgerWallet: WALLETS[0],
     settle: [], settleNote: '', settleMonth: '',
-    xferFrom: WALLETS[0], xferTo: WALLETS[1], xferAmount: '',
+    xferFrom: WALLETS[0], xferTo: WALLETS[1], xferAmount: '', xferDate: '',
     walletMonth: '',   /* เดือนที่ดูในการ์ดกระเป๋า 'YYYY-MM' — ว่าง = ยอดสะสมทั้งหมด */
     walletOpen: {},    /* กระเป๋าที่กางรายการออกดูอยู่ ชื่อกระเป๋า → true */
     locked: true, pin: "", pinErr: "", pinBusy: false, authChecked: false,
@@ -1512,12 +1516,13 @@ class Component extends DCLogic {
     if (!amt || st.xferFrom === st.xferTo) return;
     const t = Date.now();
     const note = 'โอน ' + st.xferFrom + ' → ' + st.xferTo;
+    const d = st.xferDate || today();
     this.set({
       ledger: [...st.ledger,
-        { id: 'x' + t + 'a', date: today(), type: 'expense', amount: amt, note, wallet: st.xferFrom, xfer: true },
-        { id: 'x' + t + 'b', date: today(), type: 'income', amount: amt, note, wallet: st.xferTo, xfer: true }
+        { id: 'x' + t + 'a', date: d, type: 'expense', amount: amt, note, wallet: st.xferFrom, xfer: true },
+        { id: 'x' + t + 'b', date: d, type: 'income', amount: amt, note, wallet: st.xferTo, xfer: true }
       ],
-      xferAmount: ''
+      xferAmount: '', xferDate: ''
     });
   };
 
@@ -3809,6 +3814,8 @@ class Component extends DCLogic {
       })(),
       newLedgerWallet: st.newLedgerWallet,
       xferAmount: st.xferAmount,
+      xferDate: st.xferDate || today(),
+      onXferDate: e => this.setState({ xferDate: e.target.value }),
       onXferAmount: e => this.setState({ xferAmount: e.target.value }),
       xferFromOptions: WALLETS.map(w => ({ label: w, style: pill(st.xferFrom === w), pick: () => this.setState({ xferFrom: w, xferTo: st.xferTo === w ? WALLETS.find(x => x !== w) : st.xferTo }) })),
       xferToOptions: WALLETS.filter(w => w !== st.xferFrom).map(w => ({ label: w, style: pill(st.xferTo === w), pick: () => this.setState({ xferTo: w }) })),
