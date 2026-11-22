@@ -175,5 +175,21 @@ export default {
     }
 
     return env.ASSETS.fetch(req);
+  },
+
+  /* Supabase แพลนฟรีพักโปรเจกต์อัตโนมัติถ้าไม่มีใครใช้ฐานข้อมูลราว 7 วัน (เกิดจริง พ.ย. 69 —
+     แอปขึ้นออฟไลน์ ข้อมูลว่างทั้งหน้า) จึงให้ cron ใน wrangler.toml เรียกฐานข้อมูลวันละครั้ง
+     เป็นการอ่านอย่างเดียว ไม่แก้ข้อมูล */
+  async scheduled(event, env, ctx) {
+    if (!cfg(env, 'SUPABASE_URL') || !cfg(env, 'SUPABASE_ANON_KEY') || !cfg(env, 'APP_TOKEN')) return;
+    ctx.waitUntil(fetch(cfg(env, 'SUPABASE_URL').replace(/\/+$/, '') + '/rest/v1/rpc/ml_versions', {
+      method: 'POST',
+      headers: {
+        'apikey': cfg(env, 'SUPABASE_ANON_KEY'),
+        'Authorization': 'Bearer ' + cfg(env, 'SUPABASE_ANON_KEY'),
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ p_tok: cfg(env, 'APP_TOKEN') })
+    }).then(r => console.log('keep-alive', r.status)).catch(e => console.log('keep-alive failed', String(e))));
   }
 };

@@ -13,3 +13,7 @@ run_worker_first = true
 
 # หมายเหตุ: อย่าเขียนรหัสลับลงไฟล์นี้ repo เป็น public
 # ค่าลับตั้งที่ Cloudflare → Settings → Variables and secrets
+
+# ปลุกฐานข้อมูลวันละครั้ง (03:00 เวลาไทย) กัน Supabase แพลนฟรีพักโปรเจกต์ — ดู scheduled() ใน worker.js
+[triggers]
+crons = ["0 20 * * *"]
